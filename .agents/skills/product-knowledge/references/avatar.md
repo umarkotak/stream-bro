@@ -2,13 +2,14 @@
 
 ## Goal
 
-Render a 512×512 transparent layered avatar for OBS. Webcam tracking changes face layers and moves the composed avatar. All detection stays in the browser.
+Render a square transparent layered avatar for OBS. Camera tracking changes face layers and movement. Microphone tracking can select A/I/U/E/O mouth layers. All detection stays in the browser.
 
 ## Product routes
 
 - `/studio/avatar-v1-basic`: original eight-file PNG studio.
 - `/studio/avatar-v1-psd`: the same simple avatar stored in one PSD.
-- `/editor/psd/avatar-v1`: simple PSD editor for the same eight layers.
+- `/studio/avatar-v1-psd-voice`: hybrid V1 PSD studio. Camera always tracks eyes and head; mouth input can use video or microphone.
+- `/editor/psd/avatar-v1`: shared V1 PSD editor for both camera and voice studios.
 - Old `/avatar` requests redirect to `/studio/avatar-v1-basic`.
 - All avatar studios render through `components/StudioWorkspace.js` so stage, status, footer, and control geometry stay identical.
 
@@ -33,8 +34,14 @@ Minimum: 8 images. Recommended next assets: half-closed eyes, rounded O mouth, s
 
 - The PSD uses the same eight names as the PNG files, including the `.png` suffix.
 - Each name is a leaf PSD layer: `body-base.png`, `hair-base.png`, both eye states, and all four mouth states.
+- One editor PSD has 13 layers: the original eight plus `mouth-state-a.png`, `mouth-state-i.png`, `mouth-state-u.png`, `mouth-state-e.png`, and `mouth-state-o.png`.
+- The camera V1 PSD studio reads the original eight layers. The hybrid voice studio reads all 13 layers so its Video option can use small/medium/wide and its Microphone option can use A/I/U/E/O.
 - V1 PSD tracking keeps the same blink, mouth-open bands, head movement, smoothing, and manual fallback as V1 Basic.
-- `/editor/psd/avatar-v1` shares the stable editor engine with V2 but only creates these eight required layers.
+- `/studio/avatar-v1-psd-voice` always uses camera tracking for blink and head movement. Its mouth source is selectable before tracking starts.
+- Video mouth mode uses camera jaw-open bands. Microphone mouth mode requests camera and microphone together, then uses local Web Audio formant matching. It does not send audio or perform speech recognition.
+- Voice sensitivity is adjustable. A short stability hold reduces rapid vowel flicker, and silence selects the idle mouth.
+- `/editor/psd/avatar-v1` shares the stable editor engine with V2 and creates all 13 V1 layers.
+- Both PSD editors can import an existing PSD. Matching leaf layers keep their canvas position and size; unknown layers are ignored and missing contract layers stay empty.
 - Both PSD editors render through `components/PsdEditorWorkspace.js` and share `useEditorHistory`.
 - The V1 editor previews one eye state and one mouth state at a time. Alternate layers export hidden.
 
@@ -74,6 +81,7 @@ Minimum: 8 images. Recommended next assets: half-closed eyes, rounded O mouth, s
 - Home page and navigation link to Avatar Prompt Helper.
 - Studio works with placeholders before art exists.
 - Camera permission is requested only after a user action.
+- Microphone permission is requested only when Microphone mouth mode is selected and tracking starts.
 - Permission or model errors keep manual controls usable.
 - Custom files load by the fixed contract with no code edit.
 - Saved packs appear in Avatar Studio selection.

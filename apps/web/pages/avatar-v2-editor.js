@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import SiteHeader from "@/components/SiteHeader";
 import PsdEditorWorkspace from "@/components/PsdEditorWorkspace";
 import { PSD_LAYER_SPEC } from "@/lib/avatar-v2";
+import { readNamedPsd, revokePsdModel } from "@/lib/psd-loader";
 import { useEditorHistory } from "@/lib/use-editor-history";
 
 const DEFAULT_SIZE = 1024;
@@ -62,6 +63,10 @@ function finiteNumber(value, fallback) {
   return Number.isFinite(number) ? number : fallback;
 }
 
+function normalizeLayerName(value = "") {
+  return value.toLowerCase().trim().replace(/[\s_]+/g, "-").replace(/-+/g, "-");
+}
+
 export function PsdTemplateEditor({
   layerSpecs = PSD_LAYER_SPEC.filter((layer) => layer.required),
   version = "V2",
@@ -82,6 +87,7 @@ export function PsdTemplateEditor({
   const [selectedName, setSelectedName] = useState(layerNames[0]);
   const [documentName, setDocumentName] = useState(defaultDocumentName);
   const [status, setStatus] = useState("Select a layer, then paste or choose a PNG");
+  const [isImporting, setIsImporting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
   layersRef.current = layers;
@@ -183,6 +189,59 @@ export function PsdTemplateEditor({
     setCanvasSize(nextSize);
   }
 
+  async function importPsd(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setIsImporting(true);
+    setStatus("Reading layered PSD…");
+    let imported = null;
+    try {
+      imported = await readNamedPsd(file, {
+        names: layerNames,
+        normalize: normalizeLayerName,
+        getSpec,
+      });
+      const images = new Map();
+      await Promise.all(imported.layers.map(async (layer) => {
+        images.set(layer.name, await loadImage(layer.url));
+      }));
+      const importedByName = new Map(imported.layers.map((layer) => [layer.name, layer]));
+      const nextSize = Math.max(imported.width, imported.height);
+      const nextLayers = makeLayers(layerNames, nextSize).map((layer) => {
+        const source = importedByName.get(layer.name);
+        if (!source) return layer;
+        return {
+          ...layer,
+          image: images.get(layer.name),
+          url: source.url,
+          naturalWidth: source.width,
+          naturalHeight: source.height,
+          x: source.left + source.width / 2,
+          y: source.top + source.height / 2,
+          scale: 1,
+          visible: true,
+        };
+      });
+
+      const oldUrls = [...urlsRef.current];
+      urlsRef.current = new Set(imported.urls);
+      history.reset(nextLayers);
+      setCanvasSize(nextSize);
+      setDocumentName(file.name.replace(/\.psd$/i, "") || defaultDocumentName);
+      setSelectedName(imported.layers[0]?.name || layerNames[0]);
+      oldUrls.forEach((url) => URL.revokeObjectURL(url));
+      const paddingNote = imported.width === imported.height ? "" : ` · padded to ${nextSize} × ${nextSize}`;
+      setStatus(`PSD imported · ${imported.layers.length}/${layerNames.length} named layers${paddingNote}`);
+      imported = null;
+    } catch (error) {
+      setStatus(`Import failed · ${error?.message || "Could not read PSD"}`);
+    } finally {
+      if (imported) revokePsdModel(imported);
+      setIsImporting(false);
+    }
+  }
+
   function startDrag(event, layer) {
     event.preventDefault();
     setSelectedName(layer.name);
@@ -268,7 +327,7 @@ export function PsdTemplateEditor({
   return (
     <>
       <Head>
-        <title>Avatar {version} PSD Editor — Stream Bro</title>
+        <title>{`Avatar ${version} PSD Editor — Stream Bro`}</title>
         <meta name="description" content="Paste avatar parts into required layers, position them, and export a Stream Bro PSD." />
       </Head>
       <div className="site-shell app-shell">
@@ -282,6 +341,8 @@ export function PsdTemplateEditor({
           onCanvasSizeChange={changeCanvasSize}
           filledCount={filledCount}
           layerCount={layers.length}
+          importing={isImporting}
+          onImport={importPsd}
           exporting={isExporting}
           onExport={exportPsd}
           canUndo={history.canUndo}

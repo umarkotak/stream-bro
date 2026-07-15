@@ -5,7 +5,7 @@ description: Maintain and retrieve Stream Bro product truth with a tiny core ove
 
 # Product Knowledge
 
-Stream Bro is a local-first streaming toolkit for OBS. It turns webcam expression and head movement into layered PNG-pack or PSD avatars and will grow into a home for more streaming tools. The web app lives in `apps/web` and uses Next.js.
+Stream Bro is a local-first streaming toolkit for OBS. It turns camera or microphone input into layered PNG-pack or PSD avatar animation and will grow into a home for more streaming tools. The web app lives in `apps/web` and uses Next.js.
 
 ## Knowledge rule
 

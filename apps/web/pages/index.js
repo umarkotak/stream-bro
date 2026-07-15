@@ -8,13 +8,14 @@ const groups = [
     items: [
       ["Avatar V1 Basic", "8 PNG files", "/studio/avatar-v1-basic"],
       ["Avatar V1 PSD", "Same 8 layers in one PSD", "/studio/avatar-v1-psd"],
+      ["Avatar V1 PSD Voice", "Camera + video or microphone mouth", "/studio/avatar-v1-psd-voice"],
       ["Avatar V2", "Detailed PSD and robust tracking", "/studio/avatar-v2"],
     ],
   },
   {
     title: "PSD Editors",
     items: [
-      ["Avatar V1 Editor", "Simple 8-layer PSD", "/editor/psd/avatar-v1"],
+      ["Avatar V1 Editor", "Shared camera + voice PSD", "/editor/psd/avatar-v1"],
       ["Avatar V2 Editor", "Detailed facial-part PSD", "/editor/psd/avatar-v2"],
     ],
   },

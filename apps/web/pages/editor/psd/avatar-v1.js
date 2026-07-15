@@ -1,5 +1,5 @@
 import { PsdTemplateEditor } from "../../avatar-v2-editor";
-import { V1_PSD_LAYER_SPEC } from "@/lib/avatar-v1-psd";
+import { V1_PSD_EDITOR_LAYER_SPEC } from "@/lib/avatar-v1-psd";
 
 function isAlternate(name) {
   return name === "eye-state-closed.png" || (name.startsWith("mouth-state-") && name !== "mouth-state-idle.png");
@@ -18,7 +18,7 @@ function previewVisible(name, selectedName) {
 export default function AvatarV1PsdEditor() {
   return (
     <PsdTemplateEditor
-      layerSpecs={V1_PSD_LAYER_SPEC}
+      layerSpecs={V1_PSD_EDITOR_LAYER_SPEC}
       version="V1"
       studioHref="/studio/avatar-v1-psd"
       defaultDocumentName="stream-bro-avatar-v1"

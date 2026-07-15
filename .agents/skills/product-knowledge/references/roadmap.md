@@ -14,6 +14,9 @@
 - [x] Route studios by product level: V1 Basic, V1 PSD, and V2 PSD.
 - [x] Route PSD editors by matching V1 and V2 contracts.
 - [x] Compact full-width desktop application shell.
+- [x] Hybrid V1 PSD studio with camera eyes/head tracking and selectable video or microphone mouth input.
+- [x] One 13-layer V1 editor PSD shared by camera and voice studios.
+- [x] Existing PSD import in the shared V1 and V2 editor.
 - [ ] OBS-ready transparent output route.
 
 ## User asset TODO
@@ -29,11 +32,19 @@ Create transparent 512×512 PNGs with identical alignment, then place them in `a
 - [ ] `mouth-state-medium.png`
 - [ ] `mouth-state-wide.png`
 
-The app detects these names and replaces placeholders. No import or code change is needed.
+For the shared V1 editor PSD, also paste art into these editor layers:
+
+- [ ] `mouth-state-a.png`
+- [ ] `mouth-state-i.png`
+- [ ] `mouth-state-u.png`
+- [ ] `mouth-state-e.png`
+- [ ] `mouth-state-o.png`
+
+The PNG studio detects the first eight names from the public avatar folder. The PSD studios read all layer art from the exported V1 PSD.
 
 ## Open decisions
 
 - Choose the first art style and avatar name.
 - Decide whether v1 tracking must work fully offline.
 - Choose OBS integration: browser-source URL, virtual camera, or both.
-- Decide whether PSD Avatar V2 later adds audio phoneme detection beyond visual A/I/U/E/O mouth-shape tracking.
+- Decide whether V2 should reuse or improve the V1 audio vowel classifier.
