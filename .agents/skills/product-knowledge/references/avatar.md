@@ -4,6 +4,14 @@
 
 Render a 512×512 transparent layered avatar for OBS. Webcam tracking changes face layers and moves the composed avatar. All detection stays in the browser.
 
+## Product routes
+
+- `/studio/avatar-v1-basic`: original eight-file PNG studio.
+- `/studio/avatar-v1-psd`: the same simple avatar stored in one PSD.
+- `/editor/psd/avatar-v1`: simple PSD editor for the same eight layers.
+- Old `/avatar` requests redirect to `/studio/avatar-v1-basic`.
+- All avatar studios render through `components/StudioWorkspace.js` so stage, status, footer, and control geometry stay identical.
+
 ## MVP asset contract
 
 Each avatar pack uses eight transparent PNG files in `apps/web/public/avatar/<pack>/`. `default` is the first pack. Images should be square; 512×512 is recommended. Every file should share the same canvas origin, but upload dimensions are not enforced.
@@ -20,6 +28,15 @@ Each avatar pack uses eight transparent PNG files in `apps/web/public/avatar/<pa
 | 4 | `mouth-state-wide.png` | Loud/open speech |
 
 Minimum: 8 images. Recommended next assets: half-closed eyes, rounded O mouth, smile mouth, and optional foreground accessories.
+
+## V1 PSD contract
+
+- The PSD uses the same eight names as the PNG files, including the `.png` suffix.
+- Each name is a leaf PSD layer: `body-base.png`, `hair-base.png`, both eye states, and all four mouth states.
+- V1 PSD tracking keeps the same blink, mouth-open bands, head movement, smoothing, and manual fallback as V1 Basic.
+- `/editor/psd/avatar-v1` shares the stable editor engine with V2 but only creates these eight required layers.
+- Both PSD editors render through `components/PsdEditorWorkspace.js` and share `useEditorHistory`.
+- The V1 editor previews one eye state and one mouth state at a time. Alternate layers export hidden.
 
 ## Runtime behavior
 

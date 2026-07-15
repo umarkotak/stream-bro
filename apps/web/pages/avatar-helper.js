@@ -172,7 +172,7 @@ export default function AvatarHelper() {
               </div>
               <div className="helper-finish">
                 <p>Finished the pack?</p>
-                <Link className="button button-primary" href="/avatar">Open Avatar Studio <span>↗</span></Link>
+                <Link className="button button-primary" href="/studio/avatar-v1-basic">Open Avatar Studio <span>↗</span></Link>
               </div>
             </section>
           ) : (

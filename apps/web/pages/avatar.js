@@ -2,6 +2,7 @@ import Head from "next/head";
 import { useCallback, useEffect, useRef, useState } from "react";
 import SiteHeader from "@/components/SiteHeader";
 import AvatarStage from "@/components/AvatarStage";
+import StudioWorkspace from "@/components/StudioWorkspace";
 import { AVATAR_FILES, AVATAR_MOTION_CONFIG } from "@/lib/avatar";
 
 const INITIAL_EXPRESSION = { eyes: "open", mouth: "idle", x: 0, y: 0, roll: 0 };
@@ -171,31 +172,19 @@ export default function AvatarStudio() {
         <title>Avatar Studio — Stream Bro</title>
         <meta name="description" content="Drive a layered 2D streaming avatar with your face." />
       </Head>
-      <div className="site-shell studio-page">
-        <SiteHeader studio />
-        <main className="studio-main wrap">
-          <section className="studio-intro">
-            <div>
-              <p className="eyebrow"><span /> Avatar Studio · v0.1</p>
-              <h1>Your face.<br /><em>Your character.</em></h1>
-            </div>
-            <p>Try the controls now, or turn on your camera. All face tracking runs on this device.</p>
-          </section>
-
-          <div className="studio-workspace">
-            <section className="stage-panel">
-              <div className="panel-topline">
-                <div className="live-label"><i className={mode === "camera" ? "is-live" : ""} /> {status}</div>
-                <button className="quiet-button" onClick={scanAssets}>↻ Scan assets</button>
-              </div>
-              <AvatarStage key={`${avatarPack}:${scanKey}`} pack={avatarPack} expression={expression} scanKey={scanKey} availableFiles={availableFiles} />
-              <div className="stage-footer">
-                <span><b>{availableCount}/8</b> custom layers found</span>
-                <span>Placeholders stay until your PNGs arrive</span>
-              </div>
-            </section>
-
-            <aside className="control-panel">
+      <div className="site-shell app-shell">
+        <SiteHeader />
+        <StudioWorkspace
+          title="Avatar V1 · Basic"
+          subtitle="8 PNG layers · simple tracking"
+          actionHref="/studio/avatar-v1-psd"
+          actionLabel="Open V1 PSD studio"
+          status={status}
+          live={mode === "camera"}
+          meta={<button className="quiet-button" onClick={scanAssets}>↻ Scan assets</button>}
+          stage={<AvatarStage key={`${avatarPack}:${scanKey}`} pack={avatarPack} expression={expression} scanKey={scanKey} availableFiles={availableFiles} />}
+          footer={<><span><b>{availableCount}/8</b> custom layers found</span><span>Placeholders stay until PNGs arrive</span></>}
+          controls={<>
               <div className="pack-control">
                 <label htmlFor="avatar-pack">Avatar pack</label>
                 <select id="avatar-pack" value={avatarPack} onChange={selectAvatarPack}>
@@ -251,26 +240,8 @@ export default function AvatarStudio() {
               </div>
 
               <button className="reset-button" onClick={() => setManual(INITIAL_EXPRESSION)}>Reset pose</button>
-            </aside>
-          </div>
-
-          <section className="asset-guide">
-            <div>
-              <p className="eyebrow"><span /> Bring your own art</p>
-              <h2>Eight files.<br />One living avatar.</h2>
-              <p>Use transparent 512×512 PNGs with the exact names below. Keep every drawing aligned to the same canvas.</p>
-            </div>
-            <ol>
-              {AVATAR_FILES.map((file, index) => (
-                <li key={file} className={availableFiles.includes(file) ? "is-found" : ""}>
-                  <span>{String(index + 1).padStart(2, "0")}</span>
-                  <code>{file}</code>
-                  <b>{availableFiles.includes(file) ? "found" : "needed"}</b>
-                </li>
-              ))}
-            </ol>
-          </section>
-        </main>
+            </>}
+        />
       </div>
     </>
   );

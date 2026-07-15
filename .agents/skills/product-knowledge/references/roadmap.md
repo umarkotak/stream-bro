@@ -8,6 +8,12 @@
 - [x] Webcam face landmark tracking with local model files.
 - [x] Avatar Prompt Helper with direct PNG saving.
 - [x] Avatar pack selection during camera use.
+- [x] PSD Avatar Studio V2 with one-file local loading and a fixed layer contract.
+- [x] Smooth head, body, hair, independent blink, gaze, brow, and A/I/U/E/O visual mouth tracking.
+- [x] Local PSD Template Editor with paste, upload, positioning, scale, preview, and layered PSD export.
+- [x] Route studios by product level: V1 Basic, V1 PSD, and V2 PSD.
+- [x] Route PSD editors by matching V1 and V2 contracts.
+- [x] Compact full-width desktop application shell.
 - [ ] OBS-ready transparent output route.
 
 ## User asset TODO
@@ -30,4 +36,4 @@ The app detects these names and replaces placeholders. No import or code change 
 - Choose the first art style and avatar name.
 - Decide whether v1 tracking must work fully offline.
 - Choose OBS integration: browser-source URL, virtual camera, or both.
-- Decide whether mouth states use simple openness or full phoneme shapes.
+- Decide whether PSD Avatar V2 later adds audio phoneme detection beyond visual A/I/U/E/O mouth-shape tracking.

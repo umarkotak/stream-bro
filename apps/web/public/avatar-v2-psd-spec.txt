@@ -1,0 +1,57 @@
+STREAM BRO PSD AVATAR V2 SPEC
+
+DOCUMENT
+- One half-body avatar on a transparent canvas.
+- Square canvas is recommended. 2048 x 2048 is recommended for source art.
+- RGB color mode, 8 bits per channel.
+- Use normal raster layers for the final file.
+- Keep every part in its final aligned position.
+- Groups are allowed. Leaf layer names must be unique.
+- Layer names are case-insensitive. Spaces and underscores become hyphens.
+- Hide alternate mouths and closed eyes when saving. Stream Bro controls visibility.
+
+REQUIRED LAYERS
+hair-back
+body
+neck
+head
+eye-white-left
+eye-white-right
+eye-ball-left
+eye-ball-right
+eye-lid-closed-left
+eye-lid-closed-right
+eyebrow-left
+eyebrow-right
+mouth-idle
+mouth-a
+mouth-i
+mouth-u
+mouth-e
+mouth-o
+hair-front
+
+OPTIONAL LAYERS
+accessory-back
+ear-left
+ear-right
+blush
+nose
+accessory-front
+
+MOUTH SHAPES
+mouth-idle = relaxed closed mouth
+mouth-a = wide vertical opening
+mouth-i = wide horizontal smile shape
+mouth-u = small rounded and pushed shape
+mouth-e = medium horizontal opening
+mouth-o = large rounded opening
+
+ART RULES
+- Draw complete art under moving parts so no holes appear during motion.
+- Eye whites must include the open eye outline.
+- Eye balls must include iris, pupil, and highlight.
+- Closed-eye layers replace eye-white and eye-ball layers during a blink.
+- Hair-back goes behind the body and head. Hair-front goes above the face.
+- Do not use duplicate required names.
+- PSD/PSB large-document files are not supported. Use PSD.
