@@ -1,0 +1,4 @@
+interface:
+  display_name: "Product Knowledge"
+  short_description: "Maintain lean Stream Bro product context"
+  default_prompt: "Use $product-knowledge to review and update Stream Bro product knowledge."

@@ -1,0 +1,17 @@
+{
+  "packs": [
+    {
+      "id": "default",
+      "files": [
+        "body-base.png",
+        "hair-base.png",
+        "eye-state-open.png",
+        "eye-state-closed.png",
+        "mouth-state-idle.png",
+        "mouth-state-small.png",
+        "mouth-state-medium.png",
+        "mouth-state-wide.png"
+      ]
+    }
+  ]
+}

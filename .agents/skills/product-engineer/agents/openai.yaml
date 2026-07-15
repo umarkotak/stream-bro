@@ -1,0 +1,4 @@
+interface:
+  display_name: "Product Engineer"
+  short_description: "Build Stream Bro product changes end to end"
+  default_prompt: "Use $product-engineer to build the next Stream Bro product change."
