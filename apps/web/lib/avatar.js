@@ -1,27 +1,17 @@
-export const AVATAR_FILES = [
-  "body-base.png",
-  "hair-base.png",
-  "eye-state-open.png",
-  "eye-state-closed.png",
-  "mouth-state-idle.png",
-  "mouth-state-small.png",
-  "mouth-state-medium.png",
-  "mouth-state-wide.png",
-];
+import { V1_PSD_ALL_LAYER_NAMES } from "@/lib/avatar-v1-psd";
 
-// Tune avatar movement here. Pixel values control translation; degrees control rotation.
-export const AVATAR_MOTION_CONFIG = Object.freeze({
-  horizontal: { min: -32, max: 32, trackingScale: 40 },
-  vertical: { min: -24, max: 24, trackingScale: 28 },
-  rotation: { min: -18, max: 18, trackingScale: 22 },
-  smoothing: 0.22,
-});
+export const AVATAR_FILES = V1_PSD_ALL_LAYER_NAMES;
 
 export const AVATAR_COMPONENTS = [
   {
     file: "body-base.png",
     title: "Body base",
-    layer: "Draw only the character's head skin, ears, neck, shoulders, torso, and clothing. Leave out all hair, eyebrows, eyes, and mouth.",
+    layer: "Draw only the character's half body, shoulders, arms, torso, and clothing. Leave out the head, neck, hair, eyes, eyebrows, and mouth.",
+  },
+  {
+    file: "head-base.png",
+    title: "Head base",
+    layer: "Draw only the head skin, face, ears, and neck. Leave out the body, hair, eyes, eyebrows, and mouth.",
   },
   {
     file: "hair-base.png",
@@ -58,6 +48,11 @@ export const AVATAR_COMPONENTS = [
     title: "Mouth wide",
     layer: "Draw only a wide-open mouth for loud speech. Do not draw any other avatar part.",
   },
+  { file: "mouth-state-a.png", title: "Mouth A", layer: "Draw only an A vowel mouth with a wide vertical opening. Do not draw any other avatar part." },
+  { file: "mouth-state-i.png", title: "Mouth I", layer: "Draw only an I vowel mouth with a wide horizontal shape. Do not draw any other avatar part." },
+  { file: "mouth-state-u.png", title: "Mouth U", layer: "Draw only a small rounded U vowel mouth. Do not draw any other avatar part." },
+  { file: "mouth-state-e.png", title: "Mouth E", layer: "Draw only a medium horizontal E vowel mouth. Do not draw any other avatar part." },
+  { file: "mouth-state-o.png", title: "Mouth O", layer: "Draw only a large rounded O vowel mouth. Do not draw any other avatar part." },
 ];
 
 export function normalizePackName(value) {
@@ -70,36 +65,59 @@ export function normalizePackName(value) {
     .slice(0, 48);
 }
 
-export function createAvatarPrompt(component, context, pack, background = "white") {
+function backgroundRules(background) {
   const backgroundRule = background === "transparent"
     ? "Use a real transparent background with clean alpha edges. No background, checkerboard, or matte color."
     : "Use a perfectly flat pure white (#FFFFFF) background with no shadow, texture, gradient, border, or scenery.";
   const backgroundResult = background === "transparent"
-    ? "Return only the requested layer as a transparent PNG."
-    : "Return only the requested layer on a pure white background.";
+    ? "Return a transparent PNG."
+    : "Return the image on a pure white background.";
+  return { backgroundRule, backgroundResult };
+}
 
-  return `Create one production-ready 2D avatar layer for Stream Bro.
+export function createAvatarMasterPrompt(context, background = "white") {
+  const { backgroundRule, backgroundResult } = backgroundRules(background);
+  return `Create the master reference image for a layered 2D streaming avatar.
 
 CHARACTER BRIEF
 ${context.trim()}
+
+MASTER CHARACTER
+- Draw one complete, polished half-body character facing straight at the camera.
+- Neutral pose, level shoulders, no head tilt, no perspective angle.
+- Eyes fully open. Eyebrows relaxed. Mouth closed and relaxed.
+- Include the final body, clothes, head, face, hair, eyes, eyebrows, and idle mouth.
+- Use one square canvas. 512 by 512 pixels is recommended.
+- Keep the full avatar inside a safe margin. Center the head, neck, and body.
+- ${backgroundRule}
+- No text, labels, border, watermark, props, extra views, layer sheet, or alternate expressions.
+
+This image will be attached as the fixed visual reference for every separate avatar layer. Make the design clear, consistent, and easy to separate. ${backgroundResult}`;
+}
+
+export function createAvatarLayerPrompt(component, context, background = "white") {
+  const { backgroundRule, backgroundResult } = backgroundRules(background);
+
+  return `Create one separate production-ready layer for a 2D streaming avatar.
+
+REFERENCE REQUIRED
+Use the attached master character image as the only design and alignment reference. Keep its exact character identity, proportions, pose, colors, clothes, line work, lighting, canvas, scale, and position. Do not redesign or recenter anything.
 
 LAYER TO CREATE
 ${component.title} (${component.file})
 ${component.layer}
 
-LOCKED AVATAR BLUEPRINT
-- Output exactly one 512 by 512 pixel PNG.
+LAYER RULES
+- Output one square PNG using the exact same canvas size as the attached master image.
 - ${backgroundRule}
-- Straight-on bust portrait. Character faces the camera. No head tilt or perspective angle.
-- Canvas center is x=256. Keep all visible art inside the canvas with a 24 px safe margin.
-- Head box: x=140 to 372, y=70 to 350. Eye centers: x=210 and x=302, y=220. Mouth center: x=256, y=286. Shoulders begin near y=350.
-- Preserve the same proportions, line weight, colors, lighting, and art style across all eight files in avatar pack "${pack}".
+- Keep the requested art at the exact coordinates it occupies in the master image.
+- Remove every unrequested avatar part. Do not redraw hidden parts.
 - No glow, text, labels, border, watermark, or extra objects.
-- Do not move, crop, resize, or rotate the character between layers.
+- Do not move, crop, resize, rotate, restyle, or improve the character.
 
-WORKFLOW
-If the image tool supports reference images, attach body-base.png after creating it and use it only as an alignment reference for every later layer. Do not redraw reference content.
+CHARACTER REMINDER
+${context.trim()}
 
 FINAL CHECK
-The file must overlay perfectly at 0,0 with the other 512 by 512 layers. ${backgroundResult}`;
+The result must overlay the attached master perfectly at coordinate 0,0. ${backgroundResult}`;
 }

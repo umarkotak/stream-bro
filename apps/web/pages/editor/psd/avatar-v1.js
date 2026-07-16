@@ -20,7 +20,7 @@ export default function AvatarV1PsdEditor() {
     <PsdTemplateEditor
       layerSpecs={V1_PSD_EDITOR_LAYER_SPEC}
       version="V1"
-      studioHref="/studio/avatar-v1-psd"
+      studioHref="/studio/avatar-v1"
       defaultDocumentName="stream-bro-avatar-v1"
       alternate={isAlternate}
       preview={previewVisible}

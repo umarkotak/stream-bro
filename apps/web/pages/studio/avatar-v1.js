@@ -4,15 +4,27 @@ import SiteHeader from "@/components/SiteHeader";
 import StudioWorkspace from "@/components/StudioWorkspace";
 import V1PsdAvatarStage from "@/components/V1PsdAvatarStage";
 import { AUDIO_VOWEL_CONFIG, readAudioVowel } from "@/lib/audio-vowel";
-import { AVATAR_MOTION_CONFIG } from "@/lib/avatar";
 import {
+  V1_AVATAR_MOTION,
   V1_PSD_ALL_LAYER_NAMES,
   getV1PsdLayerSpec,
   normalizeV1PsdLayerName,
 } from "@/lib/avatar-v1-psd";
 import { readNamedPsd, revokePsdModel } from "@/lib/psd-loader";
 
-const INITIAL = { eyes: "open", mouth: "idle", x: 0, y: 0, roll: 0 };
+const EMPTY_EXPRESSION = {
+  eyes: "open",
+  mouth: "idle",
+  bodyX: 0,
+  bodyY: 0,
+  bodyRoll: 0,
+  headX: 0,
+  headY: 0,
+  headRoll: 0,
+  hairX: 0,
+  hairY: 0,
+  hairRoll: 0,
+};
 const VIDEO_MOUTHS = ["idle", "small", "medium", "wide"];
 const VOICE_MOUTHS = ["idle", "a", "i", "u", "e", "o"];
 
@@ -24,13 +36,22 @@ function scoreMap(categories = []) {
   return Object.fromEntries(categories.map(({ categoryName, score }) => [categoryName, score]));
 }
 
-function getMotion(matrix) {
+function headRotation(matrix) {
   const m = matrix?.data || [];
-  if (m.length < 16) return { x: 0, y: 0, roll: 0 };
+  if (m.length < 16) return { yaw: 0, pitch: 0, roll: 0 };
   return {
-    x: clamp(Math.asin(clamp(-m[2], { min: -1, max: 1 })) * AVATAR_MOTION_CONFIG.horizontal.trackingScale, AVATAR_MOTION_CONFIG.horizontal),
-    y: clamp(Math.atan2(m[6], m[10]) * AVATAR_MOTION_CONFIG.vertical.trackingScale, AVATAR_MOTION_CONFIG.vertical),
-    roll: clamp(Math.atan2(m[1], m[0]) * AVATAR_MOTION_CONFIG.rotation.trackingScale, AVATAR_MOTION_CONFIG.rotation),
+    yaw: Math.asin(clamp(-m[2], { min: -1, max: 1 })),
+    pitch: Math.atan2(m[6], m[10]),
+    roll: Math.atan2(m[1], m[0]) * (180 / Math.PI),
+  };
+}
+
+function faceCenter(landmarks = []) {
+  const points = [10, 152, 234, 454].map((index) => landmarks[index]).filter(Boolean);
+  if (!points.length) return null;
+  return {
+    x: points.reduce((sum, point) => sum + point.x, 0) / points.length,
+    y: points.reduce((sum, point) => sum + point.y, 0) / points.length,
   };
 }
 
@@ -39,7 +60,11 @@ function videoMouth(scores) {
   return jaw > 0.58 ? "wide" : jaw > 0.32 ? "medium" : jaw > 0.12 ? "small" : "idle";
 }
 
-export default function AvatarV1PsdVoiceStudio() {
+function smoothValue(previous, target, amount) {
+  return previous + (target - previous) * amount;
+}
+
+export default function AvatarV1Studio() {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const landmarkerRef = useRef(null);
@@ -52,12 +77,13 @@ export default function AvatarV1PsdVoiceStudio() {
   const modelRef = useRef(null);
   const gateRef = useRef(AUDIO_VOWEL_CONFIG.defaultGate);
   const mouthSourceRef = useRef("video");
+  const bodyOriginRef = useRef(null);
   const statsTimeRef = useRef(0);
-  const smoothRef = useRef({ x: 0, y: 0, roll: 0 });
+  const smoothRef = useRef(EMPTY_EXPRESSION);
   const mouthTrackRef = useRef({ shown: "idle", candidate: "idle", frames: 0 });
   const [model, setModel] = useState(null);
-  const [expression, setExpression] = useState(INITIAL);
-  const [status, setStatus] = useState("Load a V1 PSD");
+  const [expression, setExpression] = useState(EMPTY_EXPRESSION);
+  const [status, setStatus] = useState("Load an Avatar V1 PSD");
   const [mode, setMode] = useState("manual");
   const [mouthSource, setMouthSource] = useState("video");
   const [gate, setGate] = useState(AUDIO_VOWEL_CONFIG.defaultGate);
@@ -86,12 +112,13 @@ export default function AvatarV1PsdVoiceStudio() {
 
   const stopTracking = useCallback(() => {
     releaseTracking();
+    bodyOriginRef.current = null;
     mouthTrackRef.current = { shown: "idle", candidate: "idle", frames: 0 };
-    smoothRef.current = { x: 0, y: 0, roll: 0 };
+    smoothRef.current = EMPTY_EXPRESSION;
     setMode("manual");
     setAudioStats({ level: 0, f1: 0, f2: 0 });
-    setExpression(INITIAL);
-    setStatus(modelRef.current ? "PSD ready · manual mode" : "Load a V1 PSD");
+    setExpression(EMPTY_EXPRESSION);
+    setStatus(modelRef.current ? "PSD ready · manual mode" : "Load an Avatar V1 PSD");
   }, [releaseTracking]);
 
   useEffect(() => () => {
@@ -137,21 +164,34 @@ export default function AvatarV1PsdVoiceStudio() {
     const result = landmarker.detectForVideo(video, performance.now());
     if (result.faceBlendshapes?.length) {
       const scores = scoreMap(result.faceBlendshapes[0].categories);
-      const blink = ((scores.eyeBlinkLeft || 0) + (scores.eyeBlinkRight || 0)) / 2;
-      const target = getMotion(result.facialTransformationMatrixes?.[0]);
-      const current = smoothRef.current;
-      const smooth = {
-        x: current.x + (target.x - current.x) * AVATAR_MOTION_CONFIG.smoothing,
-        y: current.y + (target.y - current.y) * AVATAR_MOTION_CONFIG.smoothing,
-        roll: current.roll + (target.roll - current.roll) * AVATAR_MOTION_CONFIG.smoothing,
+      const rotation = headRotation(result.facialTransformationMatrixes?.[0]);
+      const center = faceCenter(result.faceLandmarks?.[0]);
+      if (center && !bodyOriginRef.current) bodyOriginRef.current = center;
+      const origin = bodyOriginRef.current || center || { x: 0.5, y: 0.5 };
+      const bodyRoll = clamp(rotation.roll * V1_AVATAR_MOTION.body.rollScale, V1_AVATAR_MOTION.body.roll);
+      const target = {
+        bodyX: clamp((center?.x - origin.x || 0) * V1_AVATAR_MOTION.body.xScale, V1_AVATAR_MOTION.body.x),
+        bodyY: clamp((center?.y - origin.y || 0) * V1_AVATAR_MOTION.body.yScale, V1_AVATAR_MOTION.body.y),
+        bodyRoll,
+        headX: clamp(rotation.yaw * V1_AVATAR_MOTION.head.xScale, V1_AVATAR_MOTION.head.x),
+        headY: clamp(rotation.pitch * V1_AVATAR_MOTION.head.yScale, V1_AVATAR_MOTION.head.y),
+        headRoll: clamp(rotation.roll - bodyRoll, V1_AVATAR_MOTION.head.roll),
       };
-      smoothRef.current = smooth;
-      setExpression({
-        eyes: blink > 0.48 ? "closed" : "open",
+      target.hairX = target.headX * V1_AVATAR_MOTION.hair.xScale;
+      target.hairY = Math.abs(target.headRoll) * V1_AVATAR_MOTION.hair.yScale;
+      target.hairRoll = (target.bodyRoll + target.headRoll) * V1_AVATAR_MOTION.hair.gravity;
+
+      const previous = smoothRef.current;
+      const next = {
+        eyes: ((scores.eyeBlinkLeft || 0) + (scores.eyeBlinkRight || 0)) / 2 > 0.48 ? "closed" : "open",
         mouth: mouthSourceRef.current === "voice" ? audioMouth : videoMouth(scores),
-        ...smooth,
-      });
-      setStatus(`Face found · ${mouthSourceRef.current === "voice" ? "microphone" : "video"} mouth`);
+      };
+      ["bodyX", "bodyY", "bodyRoll"].forEach((key) => { next[key] = smoothValue(previous[key], target[key], V1_AVATAR_MOTION.body.smoothing); });
+      ["headX", "headY", "headRoll"].forEach((key) => { next[key] = smoothValue(previous[key], target[key], V1_AVATAR_MOTION.head.smoothing); });
+      ["hairX", "hairY", "hairRoll"].forEach((key) => { next[key] = smoothValue(previous[key], target[key], V1_AVATAR_MOTION.hair.smoothing); });
+      smoothRef.current = next;
+      setExpression(next);
+      setStatus(`Tracking live · ${mouthSourceRef.current === "voice" ? "microphone" : "video"} mouth`);
     } else {
       if (mouthSourceRef.current === "voice") setExpression((current) => ({ ...current, mouth: audioMouth }));
       setStatus("Camera live · looking for a face");
@@ -186,6 +226,7 @@ export default function AvatarV1PsdVoiceStudio() {
     setIsStarting(true);
     setStatus("Loading camera tracker…");
     mouthSourceRef.current = mouthSource;
+    bodyOriginRef.current = null;
     try {
       const { FaceLandmarker, FilesetResolver } = await import("@mediapipe/tasks-vision");
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -256,20 +297,20 @@ export default function AvatarV1PsdVoiceStudio() {
 
   return (
     <>
-      <Head><title>Avatar V1 PSD Voice Studio — Stream Bro</title></Head>
+      <Head><title>Avatar V1 Studio — Stream Bro</title></Head>
       <div className="site-shell app-shell"><SiteHeader />
         <StudioWorkspace
-          title="Avatar V1 · PSD Voice"
-          subtitle="Camera tracking · video or microphone mouth"
+          title="Avatar V1"
+          subtitle="Fluid body, head, hair, eyes, and mouth tracking"
           actionHref="/editor/psd/avatar-v1"
           actionLabel="Open V1 PSD editor"
           status={status}
           live={mode === "tracking"}
-          meta={model ? `${model.layers.length}/13 layers` : "No PSD"}
+          meta={model ? `${model.layers.length}/14 layers` : "No PSD"}
           stage={<V1PsdAvatarStage model={model} expression={expression} />}
-          footer={<><span><b>{foundCount}/13</b> required layers</span><span>{expression.eyes} · {expression.mouth.toUpperCase()} · {mouthSource}</span></>}
+          footer={<><span><b>{foundCount}/14</b> required layers</span><span>{expression.eyes} · {expression.mouth.toUpperCase()} · {mouthSource}</span></>}
           controls={<>
-            <label className={`psd-upload ${isLoading ? "is-loading" : ""}`}><span>{isLoading ? "Reading…" : model ? "Replace PSD" : "Load V1 PSD"}</span><small>One PSD supports both mouth trackers</small><input type="file" accept=".psd,image/vnd.adobe.photoshop" onChange={loadPsd} disabled={isLoading} /></label>
+            <label className={`psd-upload ${isLoading ? "is-loading" : ""}`}><span>{isLoading ? "Reading…" : model ? "Replace PSD" : "Load Avatar V1 PSD"}</span><small>14 named layers · local only</small><input type="file" accept=".psd,image/vnd.adobe.photoshop" onChange={loadPsd} disabled={isLoading} /></label>
             <div className="compact-control-block source-control"><label>Mouth tracking <b>{mouthSource}</b></label><div className="segmented two"><button className={mouthSource === "video" ? "active" : ""} onClick={() => selectMouthSource("video")}>Video</button><button className={mouthSource === "voice" ? "active" : ""} onClick={() => selectMouthSource("voice")}>Microphone</button></div></div>
             <div className="camera-card"><video ref={videoRef} muted playsInline />{mode !== "tracking" && <div className="camera-empty"><span>◌</span><p>Camera off</p></div>}<div className="camera-action-row">{mode === "tracking" ? <button className="button button-dark" onClick={stopTracking}>Stop tracking</button> : <button className="button button-dark" onClick={startTracking} disabled={!model || isStarting}>{isStarting ? "Starting…" : mouthSource === "voice" ? "Start camera + microphone" : "Start camera"}</button>}</div></div>
             {mouthSource === "voice" && <div className="voice-inline"><span>MIC {mode === "tracking" ? expression.mouth.toUpperCase() : "OFF"}</span><div className="voice-meter"><i style={{ width: `${meter}%` }} /></div><small>{audioStats.f1 ? `${Math.round(audioStats.f1)} / ${Math.round(audioStats.f2)} Hz` : "A I U E O"}</small></div>}

@@ -35,6 +35,8 @@ Load one local half-body PSD and drive its parts from webcam face tracking. V1 P
 ## PSD Template Editor
 
 - `/editor/psd/avatar-v2` is the local entry point for building a compatible PSD without Photoshop setup work.
+- Editing is selection-first: no layer is active on open or after PSD import, and only a layer chosen in the left list can accept paste, upload, drag, or resize changes.
+- Canvas clicks cannot change selection. Dragging snaps X to the horizontal center with a visible guide; Y has no snap.
 - It can import an existing layered PSD and map matching leaf names into the editor. Position and raster size are kept; unknown layers are ignored and missing layers remain empty.
 - A non-square imported PSD is placed on a square canvas using its larger dimension without blocking the import.
 - It starts with every required V2 layer name. Optional layers are not added by the simple editor.
@@ -55,10 +57,10 @@ Load one local half-body PSD and drive its parts from webcam face tracking. V1 P
 ## Interface rule
 
 - Home, studios, and PSD editors use a compact full-width desktop shell.
-- All three studios use the same two-column `StudioWorkspace` layout.
+- Both avatar studios use the same two-column `StudioWorkspace` layout.
 - Both PSD editors use the same three-column `PsdEditorWorkspace` layout.
 - Keep page titles small. Give the stage or editor canvas most of the viewport.
-- Main navigation groups four studios, two editors, and the prompt helper.
+- Main navigation groups two studios, two editors, and the prompt helper.
 - Mobile-specific layout work is not required for this version.
 
 ## PSD parser limits

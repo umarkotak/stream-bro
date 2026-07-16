@@ -8,6 +8,7 @@ import { readNamedPsd, revokePsdModel } from "@/lib/psd-loader";
 import { useEditorHistory } from "@/lib/use-editor-history";
 
 const DEFAULT_SIZE = 1024;
+const CENTER_SNAP_SCREEN_PX = 10;
 
 function makeLayers(names, size = DEFAULT_SIZE) {
   return names.map((name) => ({
@@ -84,9 +85,10 @@ export function PsdTemplateEditor({
   const [canvasSize, setCanvasSize] = useState(DEFAULT_SIZE);
   const history = useEditorHistory(makeLayers(layerNames));
   const layers = history.value;
-  const [selectedName, setSelectedName] = useState(layerNames[0]);
+  const [selectedName, setSelectedName] = useState("");
   const [documentName, setDocumentName] = useState(defaultDocumentName);
   const [status, setStatus] = useState("Select a layer, then paste or choose a PNG");
+  const [isSnappedX, setIsSnappedX] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
@@ -99,6 +101,10 @@ export function PsdTemplateEditor({
   }, []);
 
   const insertBlob = useCallback(async (blob) => {
+    if (!selectedName) {
+      setStatus("Select a layer first");
+      return;
+    }
     if (!blob?.type?.startsWith("image/")) {
       setStatus("Clipboard does not contain an image");
       return;
@@ -172,7 +178,6 @@ export function PsdTemplateEditor({
     if (!selected?.image) return;
     updateLayer(selectedName, {
       x: canvasSize / 2,
-      y: canvasSize / 2,
       scale: Math.min(canvasSize / selected.naturalWidth, canvasSize / selected.naturalHeight, 1),
     });
   }
@@ -229,7 +234,7 @@ export function PsdTemplateEditor({
       history.reset(nextLayers);
       setCanvasSize(nextSize);
       setDocumentName(file.name.replace(/\.psd$/i, "") || defaultDocumentName);
-      setSelectedName(imported.layers[0]?.name || layerNames[0]);
+      setSelectedName("");
       oldUrls.forEach((url) => URL.revokeObjectURL(url));
       const paddingNote = imported.width === imported.height ? "" : ` · padded to ${nextSize} × ${nextSize}`;
       setStatus(`PSD imported · ${imported.layers.length}/${layerNames.length} named layers${paddingNote}`);
@@ -243,20 +248,37 @@ export function PsdTemplateEditor({
   }
 
   function startDrag(event, layer) {
+    if (layer.name !== selectedName) return;
     event.preventDefault();
-    setSelectedName(layer.name);
     event.currentTarget.setPointerCapture(event.pointerId);
-    dragRef.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, x: layer.x, y: layer.y, name: layer.name, before: layersRef.current };
+    setIsSnappedX(false);
+    dragRef.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, x: layer.x, y: layer.y, name: layer.name, before: layersRef.current, snappedX: false };
+  }
+
+  function selectLayer(name) {
+    setIsSnappedX(false);
+    setSelectedName(name);
+    const layer = layersRef.current.find((item) => item.name === name);
+    setStatus(layer?.image ? `${name} selected · drag or resize` : `${name} selected · paste or choose an image`);
   }
 
   function moveDrag(event) {
     const drag = dragRef.current;
     const bounds = stageRef.current?.getBoundingClientRect();
     if (!drag || !bounds || drag.pointerId !== event.pointerId) return;
+    const rawX = Math.max(-canvasSize, Math.min(canvasSize * 2, drag.x + ((event.clientX - drag.startX) / bounds.width) * canvasSize));
+    const nextY = Math.max(-canvasSize, Math.min(canvasSize * 2, drag.y + ((event.clientY - drag.startY) / bounds.height) * canvasSize));
+    const centerX = canvasSize / 2;
+    const snapDistance = (CENTER_SNAP_SCREEN_PX / bounds.width) * canvasSize;
+    const snappedX = Math.abs(rawX - centerX) <= snapDistance;
+    if (drag.snappedX !== snappedX) {
+      drag.snappedX = snappedX;
+      setIsSnappedX(snappedX);
+    }
     history.replace((current) => current.map((layer) => layer.name === drag.name ? {
       ...layer,
-      x: Math.round(Math.max(-canvasSize, Math.min(canvasSize * 2, drag.x + ((event.clientX - drag.startX) / bounds.width) * canvasSize))),
-      y: Math.round(Math.max(-canvasSize, Math.min(canvasSize * 2, drag.y + ((event.clientY - drag.startY) / bounds.height) * canvasSize))),
+      x: Math.round(snappedX ? centerX : rawX),
+      y: Math.round(nextY),
     } : layer));
   }
 
@@ -264,6 +286,7 @@ export function PsdTemplateEditor({
     if (dragRef.current?.pointerId === event.pointerId) {
       history.checkpoint(dragRef.current.before);
       dragRef.current = null;
+      setIsSnappedX(false);
     }
   }
 
@@ -350,11 +373,11 @@ export function PsdTemplateEditor({
           onUndo={history.undo}
           onRedo={history.redo}
           status={status}
-          selectedName={selectedName}
+          selectedName={selectedName || "No layer selected"}
           layerList={<div className="editor-layers" aria-label="PSD layers">
               <header><b>Required layers</b><small>Front → Back</small></header>
               {[...layers].sort((left, right) => (getSpec(right.name)?.z || 0) - (getSpec(left.name)?.z || 0)).map((layer) => (
-                <button className={`${selectedName === layer.name ? "is-active" : ""} ${layer.image ? "is-filled" : ""}`} key={layer.name} onClick={() => setSelectedName(layer.name)}>
+                <button className={`${selectedName === layer.name ? "is-active" : ""} ${layer.image ? "is-filled" : ""}`} key={layer.name} onClick={() => selectLayer(layer.name)}>
                   <i>{layer.visible ? "◉" : "○"}</i><span>{layer.name}</span><b>{layer.image ? "ready" : "empty"}</b>
                 </button>
               ))}
@@ -362,16 +385,17 @@ export function PsdTemplateEditor({
           canvas={
               <div className="editor-canvas" ref={stageRef} onPointerMove={moveDrag} onPointerUp={stopDrag} onPointerCancel={stopDrag}>
                 <div className="stage-grid" />
+                {isSnappedX && <div className="editor-center-guide" aria-hidden="true" />}
                 {[...layers].sort((left, right) => (getSpec(left.name)?.z || 0) - (getSpec(right.name)?.z || 0)).map((layer) => {
                   if (!layer.image || !layer.visible || !preview(layer.name, selectedName)) return null;
                   return (
                     <img
-                      className={selectedName === layer.name ? "is-selected" : ""}
+                      className={selectedName === layer.name ? "is-selected is-editable" : ""}
                       key={layer.name}
                       src={layer.url}
                       alt=""
                       draggable="false"
-                      onPointerDown={(event) => startDrag(event, layer)}
+                      onPointerDown={selectedName === layer.name ? (event) => startDrag(event, layer) : undefined}
                       style={{
                         left: `${(layer.x / canvasSize) * 100}%`,
                         top: `${(layer.y / canvasSize) * 100}%`,
@@ -386,10 +410,10 @@ export function PsdTemplateEditor({
               </div>
           }
           inspector={<div className="editor-inspector">
-              <div className="inspector-title"><span>Selected layer</span><h2>{selectedName}</h2><p>{getSpec(selectedName)?.part}</p></div>
+              <div className="inspector-title"><span>Selected layer</span><h2>{selectedName || "None"}</h2><p>{selectedName ? getSpec(selectedName)?.part : "Choose a layer from the left list before editing."}</p></div>
               <div className="editor-import-actions">
-                <button onClick={readClipboard}>Paste image</button>
-                <label>Choose PNG<input type="file" accept="image/png,image/webp,image/jpeg" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; if (file) insertBlob(file); }} /></label>
+                <button onClick={readClipboard} disabled={!selectedName}>Paste image</button>
+                <label className={!selectedName ? "is-disabled" : ""}>Choose PNG<input type="file" accept="image/png,image/webp,image/jpeg" disabled={!selectedName} onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; if (file) insertBlob(file); }} /></label>
               </div>
               <div className="inspector-fields">
                 <label>X<input type="number" value={Math.round(selected?.x || 0)} onChange={(event) => updateLayer(selectedName, { x: finiteNumber(event.target.value, selected?.x || 0) })} disabled={!selected?.image} /></label>
@@ -397,11 +421,11 @@ export function PsdTemplateEditor({
                 <label className="scale-field">Scale <output>{Math.round((selected?.scale || 1) * 100)}%</output><input type="range" min="0.05" max="8" step="0.01" value={selected?.scale || 1} onChange={(event) => updateLayer(selectedName, { scale: finiteNumber(event.target.value, selected?.scale || 1) })} disabled={!selected?.image} /></label>
               </div>
               <div className="editor-small-actions">
-                <button onClick={fitSelected} disabled={!selected?.image}>Fit + center</button>
+                <button onClick={fitSelected} disabled={!selected?.image}>Fit + center X</button>
                 <button onClick={() => updateLayer(selectedName, { visible: !selected?.visible })} disabled={!selected?.image}>{selected?.visible ? "Hide" : "Show"}</button>
                 <button onClick={removeSelected} disabled={!selected?.image}>Clear</button>
               </div>
-              <p className="editor-note">Tip: transparent PNGs work best. You can drag the selected image directly on the canvas.</p>
+              <p className="editor-note">Select a layer in the left list first. Only that layer can move or resize. Dragging snaps X to center; Y stays free.</p>
               <Link className="text-link" href={studioHref}>Open PSD Studio after export ↗</Link>
             </div>}
         />

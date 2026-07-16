@@ -2,22 +2,34 @@ import Head from "next/head";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import SiteHeader from "@/components/SiteHeader";
-import { AVATAR_COMPONENTS, createAvatarPrompt, normalizePackName } from "@/lib/avatar";
+import { AVATAR_COMPONENTS, createAvatarLayerPrompt, createAvatarMasterPrompt } from "@/lib/avatar";
 
 const STORAGE_KEY = "stream-bro.avatar-helper.v1";
+const ALL_FILES = AVATAR_COMPONENTS.map((component) => component.file);
+const GROUPS = [
+  { title: "Base", files: ["body-base.png", "head-base.png", "hair-base.png"] },
+  { title: "Eyes", files: ["eye-state-open.png", "eye-state-closed.png"] },
+  { title: "Video mouth", files: ["mouth-state-idle.png", "mouth-state-small.png", "mouth-state-medium.png", "mouth-state-wide.png"] },
+  { title: "Voice A I U E O", files: ["mouth-state-a.png", "mouth-state-i.png", "mouth-state-u.png", "mouth-state-e.png", "mouth-state-o.png"] },
+];
 
 export default function AvatarHelper() {
   const [context, setContext] = useState("");
-  const [pack, setPack] = useState("default");
   const [background, setBackground] = useState("white");
   const [generatedContext, setGeneratedContext] = useState("");
+  const [selectedFiles, setSelectedFiles] = useState(ALL_FILES);
   const [copied, setCopied] = useState("");
-  const [uploads, setUploads] = useState({});
+  const [copyError, setCopyError] = useState("");
   const [hydrated, setHydrated] = useState(false);
-  const safePack = normalizePackName(pack) || "default";
-  const prompts = useMemo(
-    () => AVATAR_COMPONENTS.map((component) => ({ ...component, prompt: createAvatarPrompt(component, generatedContext, safePack, background) })),
-    [background, generatedContext, safePack],
+
+  const selected = useMemo(() => new Set(selectedFiles), [selectedFiles]);
+  const selectedComponents = useMemo(
+    () => AVATAR_COMPONENTS.filter((component) => selected.has(component.file)),
+    [selected],
+  );
+  const masterPrompt = useMemo(
+    () => generatedContext ? createAvatarMasterPrompt(generatedContext, background) : "",
+    [background, generatedContext],
   );
 
   useEffect(() => {
@@ -25,13 +37,12 @@ export default function AvatarHelper() {
       const saved = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || "null");
       if (saved) {
         setContext(saved.context || "");
-        setPack(normalizePackName(saved.pack || "default") || "default");
         setBackground(saved.background === "transparent" ? "transparent" : "white");
         setGeneratedContext(saved.generatedContext || "");
-        setUploads(Object.fromEntries(Object.entries(saved.uploads || {}).map(([key, value]) => [
-          key.replace(/-1\.png$/, ".png"),
-          value?.state === "saving" ? { state: "error", message: "Upload was interrupted. Choose the file again." } : value,
-        ])));
+        if (Array.isArray(saved.selectedFiles)) {
+          const valid = saved.selectedFiles.filter((file) => ALL_FILES.includes(file));
+          setSelectedFiles(valid);
+        }
       }
     } catch {}
     setHydrated(true);
@@ -39,148 +50,98 @@ export default function AvatarHelper() {
 
   useEffect(() => {
     if (!hydrated) return;
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      context,
-      pack: safePack,
-      background,
-      generatedContext,
-      uploads,
-    }));
-  }, [background, context, generatedContext, hydrated, safePack, uploads]);
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ context, background, generatedContext, selectedFiles }));
+  }, [background, context, generatedContext, hydrated, selectedFiles]);
 
-  function generatePrompts(event) {
+  function preparePrompts(event) {
     event.preventDefault();
-    setPack(safePack);
     setGeneratedContext(context.trim());
     setCopied("");
+    setCopyError("");
   }
 
-  async function copyPrompt(file, prompt) {
-    await navigator.clipboard.writeText(prompt);
-    setCopied(file);
-    window.setTimeout(() => setCopied((current) => current === file ? "" : current), 1600);
+  function toggleFile(file) {
+    setSelectedFiles((current) => current.includes(file) ? current.filter((item) => item !== file) : [...current, file]);
   }
 
-  async function saveImage(file, image) {
-    if (!image) return;
-    const uploadKey = `${safePack}/${file}`;
-    setUploads((old) => ({ ...old, [uploadKey]: { state: "saving", message: "Saving…" } }));
+  async function copyPrompt(key, prompt) {
     try {
-      const dataUrl = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = () => reject(new Error("Could not read the image."));
-        reader.readAsDataURL(image);
-      });
-      const response = await fetch("/api/avatar-assets", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pack: safePack, filename: file, dataUrl }),
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Could not save the image.");
-      setUploads((old) => ({ ...old, [uploadKey]: { state: "saved", message: "Saved" } }));
-    } catch (error) {
-      setUploads((old) => ({ ...old, [uploadKey]: { state: "error", message: error.message } }));
+      await navigator.clipboard.writeText(prompt);
+      setCopyError("");
+      setCopied(key);
+      window.setTimeout(() => setCopied((current) => current === key ? "" : current), 1600);
+    } catch {
+      setCopyError("Clipboard was blocked. Allow clipboard access and try again.");
     }
   }
 
   return (
     <>
       <Head>
-        <title>Avatar Prompt Helper — Stream Bro</title>
-        <meta name="description" content="Create compatible prompts and save layered avatar images." />
+        <title>Avatar V1 Prompt Helper — Stream Bro</title>
+        <meta name="description" content="Create one master avatar prompt and selected V1 layer prompts." />
       </Head>
-      <div className="site-shell helper-page">
-        <SiteHeader helper />
-        <main className="helper-main wrap">
-          <section className="helper-hero">
-            <div>
-              <p className="eyebrow"><span /> Avatar Prompt Helper</p>
-              <h1>One character.<br /><em>Eight clean layers.</em></h1>
-            </div>
-            <p>Describe the character once. Copy each locked prompt into your image tool, then save the result directly into its Stream Bro avatar pack.</p>
-          </section>
+      <div className="site-shell app-shell">
+        <SiteHeader />
+        <main className="app-main helper-v1-main">
+          <header className="app-page-bar">
+            <div><h1>Avatar V1 · Prompt Helper</h1><span>One master reference, then only the layers you need</span></div>
+            <Link href="/editor/psd/avatar-v1">Open V1 PSD editor ↗</Link>
+          </header>
 
-          <form className="prompt-builder" onSubmit={generatePrompts}>
-            <label className="context-field">
-              <span>Character context</span>
-              <textarea
-                value={context}
-                onChange={(event) => setContext(event.target.value)}
-                placeholder="Example: Momo, a cozy forest alchemist; soft anime style, moss-green hoodie, warm brown skin, playful but calm."
-                required
-              />
-              <small>Include the name, theme, clothes, colors, mood, and visual style.</small>
-            </label>
-            <div className="prompt-options">
-              <label>
-                <span>Avatar pack</span>
-                <input value={pack} onChange={(event) => setPack(normalizePackName(event.target.value))} placeholder="default" required />
-                <small>Saves to public/avatar/{safePack}/</small>
-              </label>
-              <fieldset className="background-choice">
-                <legend>Generated background</legend>
-                <div>
-                  <label>
-                    <input type="radio" name="background" value="white" checked={background === "white"} onChange={() => setBackground("white")} />
-                    <span>White</span>
-                  </label>
-                  <label>
-                    <input type="radio" name="background" value="transparent" checked={background === "transparent"} onChange={() => setBackground("transparent")} />
-                    <span>Transparent</span>
-                  </label>
-                </div>
-                <small>White works with more image models. Remove it before using the image as a live layer.</small>
-              </fieldset>
-              <button className="button button-primary" type="submit">Generate 8 prompts <span>↓</span></button>
-            </div>
-          </form>
+          <div className="helper-v1-layout">
+            <section className="master-prompt-panel">
+              <header><span>01</span><div><h2>Master character</h2><p>Create the complete neutral avatar first.</p></div></header>
+              <form onSubmit={preparePrompts}>
+                <label className="master-context"><span>Character context</span><textarea value={context} onChange={(event) => setContext(event.target.value)} placeholder="Name, theme, clothes, colors, mood, and art style." required /></label>
+                <fieldset className="background-choice">
+                  <legend>Image background</legend>
+                  <div>
+                    <label><input type="radio" name="background" value="white" checked={background === "white"} onChange={() => setBackground("white")} /><span>White</span></label>
+                    <label><input type="radio" name="background" value="transparent" checked={background === "transparent"} onChange={() => setBackground("transparent")} /><span>Transparent</span></label>
+                  </div>
+                  <small>White works with more image models. Remove it before placing the art in the PSD.</small>
+                </fieldset>
+                <button className="button button-primary" type="submit">Prepare prompts</button>
+              </form>
 
-          {generatedContext ? (
-            <section className="prompt-results">
-              <div className="results-heading">
-                <div>
-                  <p className="eyebrow"><span /> Pack: {safePack}</p>
-                  <h2>Generate in this order.</h2>
-                </div>
-                <p>Start with the body. When possible, attach it as a reference for the next seven images.</p>
+              <div className={`master-copy-card ${masterPrompt ? "is-ready" : ""}`}>
+                <div><b>Master reference prompt</b><span>{masterPrompt ? "Ready to copy" : "Add context first"}</span></div>
+                <button type="button" disabled={!masterPrompt} onClick={() => copyPrompt("master", masterPrompt)}>{copied === "master" ? "Copied" : "Copy master"}</button>
+              </div>
+              <p className="master-note">Generate the master image in your image tool. Attach that same image as the reference for every layer prompt below.</p>
+              {copyError && <p className="helper-copy-error" role="alert">{copyError}</p>}
+            </section>
+
+            <section className="layer-prompt-panel">
+              <header className="layer-prompt-head"><div><span>02</span><div><h2>Derivative layers</h2><p>Select only what you want to generate.</p></div></div><b>{selectedFiles.length}/14 selected</b></header>
+              <div className="layer-select-actions"><button type="button" onClick={() => setSelectedFiles(ALL_FILES)}>Select all</button><button type="button" onClick={() => setSelectedFiles([])}>Clear</button></div>
+              <div className="layer-picker">
+                {GROUPS.map((group) => (
+                  <fieldset key={group.title}>
+                    <legend>{group.title}</legend>
+                    {group.files.map((file) => {
+                      const component = AVATAR_COMPONENTS.find((item) => item.file === file);
+                      return <label key={file}><input type="checkbox" checked={selected.has(file)} onChange={() => toggleFile(file)} /><span><b>{component.title}</b><code>{file}</code></span></label>;
+                    })}
+                  </fieldset>
+                ))}
               </div>
 
-              <div className="prompt-list">
-                {prompts.map((item, index) => {
-                  const upload = uploads[`${safePack}/${item.file}`];
+              <div className="derivative-list">
+                {!generatedContext ? <div className="derivative-empty"><b>Prepare the master first</b><span>Layer copy buttons will appear here.</span></div> : !selectedComponents.length ? <div className="derivative-empty"><b>No layers selected</b><span>Choose one or more V1 layers above.</span></div> : selectedComponents.map((component, index) => {
+                  const prompt = createAvatarLayerPrompt(component, generatedContext, background);
                   return (
-                    <article className="prompt-card" key={item.file}>
-                      <header>
-                        <span>{String(index + 1).padStart(2, "0")}</span>
-                        <div><h3>{item.title}</h3><code>{item.file}</code></div>
-                        <button type="button" onClick={() => copyPrompt(item.file, item.prompt)}>{copied === item.file ? "Copied" : "Copy prompt"}</button>
-                      </header>
-                      <textarea value={item.prompt} readOnly aria-label={`${item.title} prompt`} />
-                      <footer>
-                        <p>For live layers, use a square PNG with white removed. 512×512 is recommended.</p>
-                        <label className={`upload-button ${upload?.state || ""}`}>
-                          <input type="file" accept="image/png" onChange={(event) => { saveImage(item.file, event.target.files?.[0]); event.target.value = ""; }} />
-                          {upload?.message || `Save as ${item.file}`}
-                        </label>
-                      </footer>
-                      {upload?.state === "error" && <p className="upload-error" role="alert">{upload.message}</p>}
+                    <article key={component.file}>
+                      <span>{String(index + 1).padStart(2, "0")}</span>
+                      <div><h3>{component.title}</h3><code>{component.file}</code></div>
+                      <button type="button" onClick={() => copyPrompt(component.file, prompt)}>{copied === component.file ? "Copied" : "Copy prompt"}</button>
                     </article>
                   );
                 })}
               </div>
-              <div className="helper-finish">
-                <p>Finished the pack?</p>
-                <Link className="button button-primary" href="/studio/avatar-v1-basic">Open Avatar Studio <span>↗</span></Link>
-              </div>
             </section>
-          ) : (
-            <section className="helper-empty">
-              <span>01—08</span>
-              <p>Your component prompts will appear here.</p>
-            </section>
-          )}
+          </div>
         </main>
       </div>
     </>

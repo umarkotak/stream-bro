@@ -2,9 +2,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 
 const LINKS = [
-  ["V1 Basic", "/studio/avatar-v1-basic", false],
-  ["V1 PSD", "/studio/avatar-v1-psd", false],
-  ["V1 Voice", "/studio/avatar-v1-psd-voice", false],
+  ["V1", "/studio/avatar-v1", false],
   ["V2", "/studio/avatar-v2", false],
   ["V1 Editor", "/editor/psd/avatar-v1", true],
   ["V2 Editor", "/editor/psd/avatar-v2", false],
