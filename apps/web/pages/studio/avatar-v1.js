@@ -6,25 +6,13 @@ import V1PsdAvatarStage from "@/components/V1PsdAvatarStage";
 import { AUDIO_VOWEL_CONFIG, readAudioVowel } from "@/lib/audio-vowel";
 import {
   V1_AVATAR_MOTION,
+  V1_EMPTY_EXPRESSION as EMPTY_EXPRESSION,
   V1_PSD_ALL_LAYER_NAMES,
   getV1PsdLayerSpec,
   normalizeV1PsdLayerName,
 } from "@/lib/avatar-v1-psd";
 import { readNamedPsd, revokePsdModel } from "@/lib/psd-loader";
 
-const EMPTY_EXPRESSION = {
-  eyes: "open",
-  mouth: "idle",
-  bodyX: 0,
-  bodyY: 0,
-  bodyRoll: 0,
-  headX: 0,
-  headY: 0,
-  headRoll: 0,
-  hairX: 0,
-  hairY: 0,
-  hairRoll: 0,
-};
 const VIDEO_MOUTHS = ["idle", "small", "medium", "wide"];
 const VOICE_MOUTHS = ["idle", "a", "i", "u", "e", "o"];
 

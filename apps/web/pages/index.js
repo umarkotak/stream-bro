@@ -19,7 +19,10 @@ const groups = [
   },
   {
     title: "Tools",
-    items: [["Prompt Helper", "Generate aligned V1 PNG prompts", "/avatar-helper"]],
+    items: [
+      ["OBS Overlay", "Configure a transparent avatar browser source", "/overlay"],
+      ["Prompt Helper", "Generate aligned V1 PNG prompts", "/avatar-helper"],
+    ],
   },
 ];
 

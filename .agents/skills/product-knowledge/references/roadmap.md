@@ -13,9 +13,11 @@
 - [x] Local A/I/U/E/O microphone mouth selection.
 - [x] Master-reference prompt flow with selectable V1 derivative layers.
 - [x] Selection-first PSD editing with horizontal-center snap and free Y movement.
+- [x] Selected-layer rotation and direct pen/eraser drawing in both PSD editors.
+- [x] Fixed desktop PSD workspace with left tools, center canvas, and right layer stack.
 - [x] V2 studio and editor remain available.
 - [x] Compact full-width desktop application shell.
-- [ ] OBS-ready transparent output route.
+- [x] OBS-ready transparent browser-source setup and output routes.
 
 ## User asset TODO
 
@@ -40,5 +42,5 @@ Create aligned square art, then paste it into `/editor/psd/avatar-v1` or import 
 
 - Choose the first art style and avatar name.
 - Decide whether V1 later needs true pose landmarks instead of face-position body inference.
-- Choose OBS integration: browser-source URL, virtual camera, or both.
+- Decide whether to add a virtual-camera output after the browser-source URL.
 - Decide whether V2 should reuse or improve the V1 audio vowel classifier.

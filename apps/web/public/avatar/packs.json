@@ -12,6 +12,20 @@
         "mouth-state-medium.png",
         "mouth-state-wide.png"
       ]
+    },
+    {
+      "id": "stream-bro-avatar-v1",
+      "files": [
+        "body-base.png",
+        "head-base.png",
+        "eye-state-open.png",
+        "eye-state-closed.png",
+        "mouth-state-idle.png",
+        "mouth-state-small.png",
+        "mouth-state-medium.png",
+        "mouth-state-wide.png",
+        "hair-base.png"
+      ]
     }
   ]
 }

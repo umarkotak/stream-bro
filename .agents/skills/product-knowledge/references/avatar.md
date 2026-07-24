@@ -8,6 +8,8 @@ Load one simple PSD and create a fluid half-body avatar for OBS. Camera tracking
 
 - `/studio/avatar-v1`: the only V1 studio.
 - `/editor/psd/avatar-v1`: the matching V1 PSD editor.
+- `/overlay`: configure the public-pack transparent OBS overlay.
+- `/overlay/avatar`: character-only OBS renderer driven by URL settings.
 - Old `/avatar`, `/studio/avatar-v1-basic`, `/studio/avatar-v1-psd`, and `/studio/avatar-v1-psd-voice` requests redirect to `/studio/avatar-v1`.
 - V2 remains available and unchanged.
 
@@ -50,13 +52,25 @@ The V1 PSD has 14 required leaf layers. Names include `.png`.
 ## PSD editor
 
 - The V1 editor starts with all 14 exact layer names.
-- No layer is active when the editor opens or finishes a PSD import. The user must select a layer from the left list before paste, upload, drag, or resize controls become active.
+- No layer is active when the editor opens or finishes a PSD import. The user must select a layer from the left list before paste, upload, drag, resize, rotate, or drawing controls become active.
 - Clicking canvas art never changes the selected layer. Only the selected layer receives pointer input.
 - Dragging snaps the selected layer's X position to the horizontal canvas center within a small screen-space threshold. A vertical guide appears while snapped. Y movement stays free and has no center snap.
-- It supports paste, image selection, position, scale, visibility, fit, clear, undo, redo, and layered PSD export.
+- Transform mode supports position, scale, rotation, visibility, fit, and clear.
+- Paint mode works on blank or loaded layers. The selected layer stays fully visible while other relevant layers remain as faint, non-interactive positioning guides.
+- Pen, eraser, brush size, color, and clear controls are in the left tool panel. Guide opacity is controlled by the editor CSS variable `--paint-reference-opacity`.
+- Starting to paint a loaded layer bakes its current position, scale, and rotation into a full-canvas raster.
+- Each completed paint stroke is one undo step.
+- It also supports paste, image selection, undo, redo, and layered PSD export.
+- The V1 editor can save every filled layer directly as a public OBS avatar pack.
+- Save to OBS opens a state-controlled modal where the user enters the pack name, then confirms the write. Cancel, backdrop click, and Escape always close it.
+- Public-pack export bakes each layer's position, scale, and rotation into a full-canvas transparent PNG, updates `packs.json`, and removes stale known layers from the same pack.
+- The saved pack becomes the selected model when the user opens Overlay setup.
 - Import PSD maps matching leaf layers into the editor while keeping raster size and canvas position.
 - Unknown imported layers are ignored. Missing layers remain empty.
 - Alternate eye and mouth layers export hidden so exactly one state is shown by default.
+- The editor is a fixed desktop workspace with no site navbar or page scroll. A compact top bar holds Back, file settings, PSD import, history, studio, and export actions.
+- Tools and active-layer settings are on the left, the canvas is centered, and the internally scrolling layer stack is on the right.
+- Layer rows provide artwork thumbnails, selection state, and direct visibility toggles. Undo and redo also support Ctrl/Cmd keyboard shortcuts.
 
 ## Prompt helper
 
@@ -77,3 +91,4 @@ The V1 PSD has 14 required leaf layers. Names include `.png`.
 - Video and microphone mouth modes both use the same 14-layer PSD.
 - A valid imported or exported PSD keeps layer alignment.
 - The stage remains suitable for OBS capture.
+- The public-pack overlay uses the same V1 expression and body, head, and hair motion rules on a transparent OBS browser source.

@@ -35,14 +35,17 @@ Load one local half-body PSD and drive its parts from webcam face tracking. V1 P
 ## PSD Template Editor
 
 - `/editor/psd/avatar-v2` is the local entry point for building a compatible PSD without Photoshop setup work.
-- Editing is selection-first: no layer is active on open or after PSD import, and only a layer chosen in the left list can accept paste, upload, drag, or resize changes.
+- Editing is selection-first: no layer is active on open or after PSD import, and only a layer chosen in the left list can accept paste, upload, drag, resize, rotate, or drawing changes.
 - Canvas clicks cannot change selection. Dragging snaps X to the horizontal center with a visible guide; Y has no snap.
 - It can import an existing layered PSD and map matching leaf names into the editor. Position and raster size are kept; unknown layers are ignored and missing layers remain empty.
 - A non-square imported PSD is placed on a square canvas using its larger dimension without blocking the import.
 - It starts with every required V2 layer name. Optional layers are not added by the simple editor.
 - Select one layer, paste a clipboard image or choose a PNG/JPEG/WebP, then drag it on the square canvas.
-- X, Y, scale, visibility, fit, center, and clear controls apply to the selected layer.
-- Paste, clear, fit, visibility, position, scale, and completed drag moves support undo and redo.
+- X, Y, scale, rotation, visibility, fit, center, and clear controls apply to the selected layer.
+- Paint mode works on blank or loaded layers. The selected layer stays fully visible while other relevant layers remain as faint, non-interactive positioning guides.
+- Pen, eraser, brush size, color, and clear controls are in the left tool panel. Guide opacity is controlled by the editor CSS variable `--paint-reference-opacity`.
+- Painting a loaded layer bakes its current position, scale, and rotation into a full-canvas raster. Each completed stroke is one undo step.
+- Paste, clear, fit, visibility, position, scale, rotation, drawing, and completed drag moves support undo and redo.
 - A drag creates one history step instead of one step per pointer movement.
 - Changing canvas size rescales every layer and safely resets incompatible history.
 - Canvas choices are 512, 1024, and 2048 square pixels. The default is 1024.
@@ -53,12 +56,15 @@ Load one local half-body PSD and drive its parts from webcam face tracking. V1 P
 - Export forces normal transparent layers, trims empty layer bounds, skips fragile thumbnail generation, and attaches the download link before clicking it.
 - Export includes empty named layers, but V2 Studio reports an empty required layer as missing until art is added.
 - Editor images live only in memory. Leaving the page clears the draft.
+- The editor is a fixed desktop workspace with no site navbar or page scroll. A compact top bar holds Back, file settings, PSD import, history, studio, and export actions.
+- Tools and active-layer settings are on the left, the canvas is centered, and the internally scrolling layer stack is on the right.
+- Layer rows provide artwork thumbnails, selection state, and direct visibility toggles. Undo and redo also support Ctrl/Cmd keyboard shortcuts.
 
 ## Interface rule
 
-- Home, studios, and PSD editors use a compact full-width desktop shell.
+- Home and studios use the compact full-width desktop shell. PSD editors use a dedicated fixed-height desktop workspace without the site navbar.
 - Both avatar studios use the same two-column `StudioWorkspace` layout.
-- Both PSD editors use the same three-column `PsdEditorWorkspace` layout.
+- Both PSD editors use the same `PsdEditorWorkspace`: tools left, canvas center, layers right.
 - Keep page titles small. Give the stage or editor canvas most of the viewport.
 - Main navigation groups two studios, two editors, and the prompt helper.
 - Mobile-specific layout work is not required for this version.
