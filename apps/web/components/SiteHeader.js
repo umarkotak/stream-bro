@@ -7,7 +7,7 @@ const LINKS = [
   ["V1 Editor", "/editor/psd/avatar-v1", true],
   ["V2 Editor", "/editor/psd/avatar-v2", false],
   ["Overlay", "/overlay", true],
-  ["Prompt Helper", "/avatar-helper", false],
+  ["Prompt Builder", "/avatar-helper", false],
 ];
 
 export default function SiteHeader() {

@@ -7,6 +7,8 @@ import { useEditorHistory } from "@/lib/use-editor-history";
 
 const DEFAULT_SIZE = 1024;
 const CENTER_SNAP_SCREEN_PX = 10;
+const MIN_LAYER_SCALE = 0.05;
+const MAX_LAYER_SCALE = 8;
 const DEFAULT_LAYER_SPECS = PSD_LAYER_SPEC.filter((layer) => layer.required);
 
 function makeLayers(names, size = DEFAULT_SIZE) {
@@ -92,6 +94,25 @@ function normalizeLayerName(value = "") {
   return value.toLowerCase().trim().replace(/[\s_]+/g, "-").replace(/-+/g, "-");
 }
 
+function clamp(value, minimum, maximum) {
+  return Math.max(minimum, Math.min(maximum, value));
+}
+
+function normalizeDegrees(value) {
+  return ((value + 180) % 360 + 360) % 360 - 180;
+}
+
+function normalizeRadians(value) {
+  return Math.atan2(Math.sin(value), Math.cos(value));
+}
+
+function rotatePoint(x, y, radians) {
+  return {
+    x: x * Math.cos(radians) - y * Math.sin(radians),
+    y: x * Math.sin(radians) + y * Math.cos(radians),
+  };
+}
+
 export function PsdTemplateEditor({
   layerSpecs = DEFAULT_LAYER_SPECS,
   version = "V2",
@@ -100,6 +121,7 @@ export function PsdTemplateEditor({
   alternate = isAlternate,
   preview = previewVisible,
   publicAvatarExport: PublicAvatarExport = null,
+  directTransformHandles = false,
 }) {
   const layerNames = useMemo(() => layerSpecs.map((layer) => layer.name), [layerSpecs]);
   const specsByName = useMemo(() => new Map(layerSpecs.map((layer) => [layer.name, layer])), [layerSpecs]);
@@ -107,6 +129,7 @@ export function PsdTemplateEditor({
   const getSpec = (name) => specsByName.get(name);
   const stageRef = useRef(null);
   const dragRef = useRef(null);
+  const transformRef = useRef(null);
   const paintCanvasRef = useRef(null);
   const paintRef = useRef(null);
   const paintCommitRef = useRef(false);
@@ -347,6 +370,76 @@ export function PsdTemplateEditor({
     dragRef.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, x: layer.x, y: layer.y, name: layer.name, before: layersRef.current, snappedX: false };
   }
 
+  function stagePoint(event) {
+    const bounds = stageRef.current?.getBoundingClientRect();
+    if (!bounds?.width || !bounds?.height) return null;
+    return {
+      x: ((event.clientX - bounds.left) / bounds.width) * canvasSize,
+      y: ((event.clientY - bounds.top) / bounds.height) * canvasSize,
+    };
+  }
+
+  function startDirectTransform(event, layer, type, corner = null) {
+    if (event.button !== 0 || layer.name !== selectedName) return;
+    const point = stagePoint(event);
+    if (!point) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setIsSnappedX(false);
+
+    if (type === "rotate") {
+      transformRef.current = {
+        type,
+        pointerId: event.pointerId,
+        name: layer.name,
+        before: layersRef.current,
+        lastAngle: Math.atan2(point.y - layer.y, point.x - layer.x),
+        rotation: layer.rotation || 0,
+      };
+      setStatus(`${layer.name} · drag to rotate`);
+      return;
+    }
+
+    const width = layer.naturalWidth * layer.scale;
+    const height = layer.naturalHeight * layer.scale;
+    const radians = (layer.rotation || 0) * (Math.PI / 180);
+    const anchorOffset = rotatePoint((-corner.x * width) / 2, (-corner.y * height) / 2, radians);
+    transformRef.current = {
+      type,
+      pointerId: event.pointerId,
+      name: layer.name,
+      before: layersRef.current,
+      x: layer.x,
+      y: layer.y,
+      scale: layer.scale,
+      width,
+      height,
+      radians,
+      corner,
+      anchor: {
+        x: layer.x + anchorOffset.x,
+        y: layer.y + anchorOffset.y,
+      },
+    };
+    setStatus(`${layer.name} · drag a corner to resize`);
+  }
+
+  function keyboardDirectTransform(event, layer, type) {
+    const direction = ["ArrowRight", "ArrowUp"].includes(event.key)
+      ? 1
+      : ["ArrowLeft", "ArrowDown"].includes(event.key) ? -1 : 0;
+    if (!direction) return;
+    event.preventDefault();
+    if (type === "rotate") {
+      const step = event.shiftKey ? 15 : 1;
+      updateLayer(layer.name, { rotation: normalizeDegrees((layer.rotation || 0) + direction * step) });
+      return;
+    }
+    const step = event.shiftKey ? 0.1 : 0.01;
+    updateLayer(layer.name, { scale: clamp(layer.scale + direction * step, MIN_LAYER_SCALE, MAX_LAYER_SCALE) });
+  }
+
   function selectLayer(name) {
     setIsSnappedX(false);
     setDrawMode(false);
@@ -478,11 +571,75 @@ export function PsdTemplateEditor({
     } : layer));
   }
 
-  function stopDrag(event) {
+  function moveDirectTransform(event) {
+    const interaction = transformRef.current;
+    if (!interaction || interaction.pointerId !== event.pointerId) return;
+    const point = stagePoint(event);
+    if (!point) return;
+    event.preventDefault();
+
+    if (interaction.type === "rotate") {
+      const layer = layersRef.current.find((item) => item.name === interaction.name);
+      if (!layer) return;
+      const angle = Math.atan2(point.y - layer.y, point.x - layer.x);
+      const delta = normalizeRadians(angle - interaction.lastAngle) * (180 / Math.PI);
+      interaction.lastAngle = angle;
+      interaction.rotation = normalizeDegrees(interaction.rotation + delta);
+      const rotation = event.shiftKey
+        ? Math.round(interaction.rotation / 15) * 15
+        : interaction.rotation;
+      history.replace((current) => current.map((item) => item.name === interaction.name ? {
+        ...item,
+        rotation,
+      } : item));
+      return;
+    }
+
+    const pointerFromAnchor = {
+      x: point.x - interaction.anchor.x,
+      y: point.y - interaction.anchor.y,
+    };
+    const localPointer = rotatePoint(pointerFromAnchor.x, pointerFromAnchor.y, -interaction.radians);
+    const baseX = interaction.corner.x * interaction.width;
+    const baseY = interaction.corner.y * interaction.height;
+    const scaleFactor = ((localPointer.x * baseX) + (localPointer.y * baseY)) / ((baseX * baseX) + (baseY * baseY));
+    const scale = clamp(interaction.scale * scaleFactor, MIN_LAYER_SCALE, MAX_LAYER_SCALE);
+    const appliedFactor = scale / interaction.scale;
+    const centerOffset = rotatePoint(
+      (interaction.corner.x * interaction.width * appliedFactor) / 2,
+      (interaction.corner.y * interaction.height * appliedFactor) / 2,
+      interaction.radians,
+    );
+
+    history.replace((current) => current.map((item) => item.name === interaction.name ? {
+      ...item,
+      x: interaction.anchor.x + centerOffset.x,
+      y: interaction.anchor.y + centerOffset.y,
+      scale,
+    } : item));
+  }
+
+  function movePointerInteraction(event) {
+    moveDrag(event);
+    moveDirectTransform(event);
+  }
+
+  function stopPointerInteraction(event) {
     if (dragRef.current?.pointerId === event.pointerId) {
       history.checkpoint(dragRef.current.before);
       dragRef.current = null;
       setIsSnappedX(false);
+    }
+    if (transformRef.current?.pointerId === event.pointerId) {
+      const interaction = transformRef.current;
+      history.checkpoint(interaction.before);
+      transformRef.current = null;
+      const layer = layersRef.current.find((item) => item.name === interaction.name);
+      if (layer) {
+        setStatus(interaction.type === "rotate"
+          ? `${layer.name} · rotation ${Math.round(layer.rotation || 0)}°`
+          : `${layer.name} · scale ${Math.round(layer.scale * 100)}%`);
+      }
     }
   }
 
@@ -715,13 +872,17 @@ export function PsdTemplateEditor({
             )}
 
             <div className="editor-tool-tip">
-              <b>{drawMode ? "Paint directly" : "Move freely"}</b>
-              <span>{drawMode ? "Other layers stay faint for positioning. Each stroke can be undone." : "Drag the selected art. X snaps to center; Y stays free."}</span>
+              <b>{drawMode ? "Paint directly" : directTransformHandles ? "Move, resize, rotate" : "Move freely"}</b>
+              <span>{drawMode
+                ? "Other layers stay faint for positioning. Each stroke can be undone."
+                : directTransformHandles
+                  ? "Drag art to move. Pull a corner to resize. Drag the top control to rotate."
+                  : "Drag the selected art. X snaps to center; Y stays free."}</span>
             </div>
           </div>
         }
         canvas={
-          <div className="editor-canvas" ref={stageRef} onPointerMove={moveDrag} onPointerUp={stopDrag} onPointerCancel={stopDrag}>
+          <div className="editor-canvas" ref={stageRef} onPointerMove={movePointerInteraction} onPointerUp={stopPointerInteraction} onPointerCancel={stopPointerInteraction}>
             <div className="stage-grid" />
             {isSnappedX && <div className="editor-center-guide" aria-hidden="true" />}
             {backToFrontLayers.map((layer) => {
@@ -745,6 +906,47 @@ export function PsdTemplateEditor({
                 />
               );
             })}
+            {directTransformHandles && !drawMode && selected?.image && selected.visible && (
+              <div
+                className="editor-transform-box"
+                aria-label={`Transform ${selected.name}`}
+                style={{
+                  left: `${(selected.x / canvasSize) * 100}%`,
+                  top: `${(selected.y / canvasSize) * 100}%`,
+                  width: `${((selected.naturalWidth * selected.scale) / canvasSize) * 100}%`,
+                  height: `${((selected.naturalHeight * selected.scale) / canvasSize) * 100}%`,
+                  transform: `translate(-50%, -50%) rotate(${selected.rotation || 0}deg)`,
+                }}
+              >
+                <span className="editor-rotate-stem" aria-hidden="true" />
+                <button
+                  type="button"
+                  className="editor-rotate-handle"
+                  aria-label={`Rotate ${selected.name}`}
+                  title="Drag to rotate. Hold Shift to snap to 15°."
+                  onPointerDown={(event) => startDirectTransform(event, selected, "rotate")}
+                  onKeyDown={(event) => keyboardDirectTransform(event, selected, "rotate")}
+                >
+                  ↻
+                </button>
+                {[
+                  ["nw", -1, -1],
+                  ["ne", 1, -1],
+                  ["se", 1, 1],
+                  ["sw", -1, 1],
+                ].map(([position, x, y]) => (
+                  <button
+                    type="button"
+                    className={`editor-resize-handle is-${position}`}
+                    aria-label={`Resize ${selected.name} from ${position.toUpperCase()} corner`}
+                    title="Drag to resize"
+                    key={position}
+                    onPointerDown={(event) => startDirectTransform(event, selected, "resize", { x, y })}
+                    onKeyDown={(event) => keyboardDirectTransform(event, selected, "resize")}
+                  />
+                ))}
+              </div>
+            )}
             {drawMode && selectedName && <canvas
               ref={paintCanvasRef}
               className={`editor-paint-canvas is-${paintTool}`}

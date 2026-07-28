@@ -27,7 +27,7 @@ The V1 PSD has 14 required leaf layers. Names include `.png`.
 | Microphone mouth | `mouth-state-a.png`, `mouth-state-i.png`, `mouth-state-u.png`, `mouth-state-e.png`, `mouth-state-o.png` |
 
 - `body-base.png` contains only the half body, clothes, shoulders, and arms.
-- `head-base.png` contains the head, face skin, ears, and neck without hair, eyes, or mouth.
+- `head-base.png` contains a floating head, face skin, and ears without neck, hair, eyes, or mouth.
 - All layers share one square canvas and alignment. 512×512 is recommended, not enforced.
 - Matching is case-insensitive. Spaces and underscores normalize to hyphens.
 - Unknown layers are ignored. Missing required layers remain visible in the checklist.
@@ -56,6 +56,7 @@ The V1 PSD has 14 required leaf layers. Names include `.png`.
 - Clicking canvas art never changes the selected layer. Only the selected layer receives pointer input.
 - Dragging snaps the selected layer's X position to the horizontal canvas center within a small screen-space threshold. A vertical guide appears while snapped. Y movement stays free and has no center snap.
 - Transform mode supports position, scale, rotation, visibility, fit, and clear.
+- In the V1 editor, selected artwork has a Canva-style bounding box. Drag any corner to resize it proportionally around the opposite corner. Drag the rotate control at the top of the box to follow the pointer; hold Shift to snap rotation to 15° steps.
 - Paint mode works on blank or loaded layers. The selected layer stays fully visible while other relevant layers remain as faint, non-interactive positioning guides.
 - Pen, eraser, brush size, color, and clear controls are in the left tool panel. Guide opacity is controlled by the editor CSS variable `--paint-reference-opacity`.
 - Starting to paint a loaded layer bakes its current position, scale, and rotation into a full-canvas raster.
@@ -74,13 +75,19 @@ The V1 PSD has 14 required leaf layers. Names include `.png`.
 
 ## Prompt helper
 
-- Avatar Prompt Helper first creates one master prompt for a complete neutral character.
-- The user generates that master image externally, then attaches it as the fixed reference for each derivative layer prompt.
-- The helper never shows full prompt text. It exposes copy buttons for the master and selected derivative layers.
-- The user can select any subset of the 14 V1 layers, grouped as Base, Eyes, Video mouth, and Voice A/I/U/E/O.
-- Derivative prompts lock design, canvas, scale, and coordinates to the attached master while asking for only one named layer.
-- White or transparent backgrounds are supported; white remains the default for wider image-model support.
-- Character context, prepared context, background, and selected layers stay in local storage.
+- Avatar Prompt Builder accepts one short character context.
+- It turns that context into a visible structured request that the user copies into a text LLM.
+- The LLM is instructed to return only one exact image-generation prompt.
+- The user sends the returned prompt to an external image tool, then brings the generated sheet back into the builder.
+- The target image is one high-resolution portrait dress-up sheet with all 14 V1 parts separated and arranged in a fixed reading order.
+- The body and head are separate pieces with a wide gap. The head floats and no neck or neck stump is drawn on the head or body.
+- The sheet uses a flat white background for easy cutting. It has no labels, dividers, complete assembled avatar, or overlapping pieces.
+- Image Breakdown accepts a selected image file or an image pasted from the system clipboard.
+- Breakdown runs only in the browser. It removes edge-connected transparent or white background, detects separated artwork, and groups nearby fragments toward the 14-part contract.
+- Detected pieces are auto-mapped to V1 layers in reading order. The user can inspect each transparent preview and change its one-to-one layer assignment.
+- PSD export includes every required V1 layer name. Mapped artwork keeps its source scale and is centered so the user can position, resize, rotate, paint, and finish it in the V1 PSD editor.
+- The page always shows the complete grouped V1 layer contract: Base, Eyes, Video mouth, and Voice.
+- Character context and prepared context stay in local storage. Source images and detected artwork stay only in memory.
 
 ## Acceptance
 

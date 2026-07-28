@@ -1,6 +1,6 @@
 const DETAILS = {
   "body-base.png": "Half body, shoulders, clothes, and arms without the head",
-  "head-base.png": "Head, face skin, ears, and neck without hair, eyes, or mouth",
+  "head-base.png": "Floating head, face skin, and ears without neck, hair, eyes, or mouth",
   "hair-base.png": "Complete hair layer above the head and face",
   "eye-state-open.png": "Both open eyes and eyebrows",
   "eye-state-closed.png": "Both closed eyes and eyebrows",

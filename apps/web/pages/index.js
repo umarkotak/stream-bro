@@ -21,7 +21,7 @@ const groups = [
     title: "Tools",
     items: [
       ["OBS Overlay", "Configure a transparent avatar browser source", "/overlay"],
-      ["Prompt Helper", "Generate aligned V1 PNG prompts", "/avatar-helper"],
+      ["Prompt Builder", "Create, split, and export a V1 dress-up sheet", "/avatar-helper"],
     ],
   },
 ];

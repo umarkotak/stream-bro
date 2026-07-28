@@ -2,7 +2,7 @@
 
 ## Goal
 
-Create one copyable URL for an OBS Browser Source. The output page contains only the avatar on a real transparent background. Camera and optional microphone processing stay local inside the browser source.
+Create one copyable URL for an OBS Browser Source. The output page contains only the avatar on a solid `#00ff00` green background for chroma keying. Camera and optional microphone processing stay local inside the browser source.
 
 ## Routes
 
@@ -37,8 +37,8 @@ Create one copyable URL for an OBS Browser Source. The output page contains only
 
 ## Renderer
 
-- The page has no navigation, controls, text, checkerboard, or solid background.
-- HTML, body, Next root, and renderer surfaces force transparent backgrounds.
+- The page has no navigation, controls, text, or checkerboard.
+- HTML, body, and the Next root use a solid `#00ff00` green background. Avatar renderer surfaces stay transparent so the green shows behind the model.
 - The public pack loads directly from stable asset URLs.
 - Tracking uses the same V1 expression shape, motion limits, smoothing, face-center calibration, blink threshold, and mouth bands as `/studio/avatar-v1`.
 - Body, head, and hair render as the same separate V1 motion groups. Hair uses the same subtle lag and gravity response.
@@ -61,7 +61,7 @@ Create one copyable URL for an OBS Browser Source. The output page contains only
 
 - Setup generates a full copyable URL.
 - A valid renderer URL shows only the selected character.
-- The output background remains transparent in OBS.
+- The output background remains solid `#00ff00` green in OBS for chroma keying.
 - Position and scale match setup.
 - Camera and supported microphone modes animate locally.
 - A blocked camera leaves a clean idle avatar instead of setup or error UI.

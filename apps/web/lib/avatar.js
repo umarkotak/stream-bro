@@ -11,7 +11,7 @@ export const AVATAR_COMPONENTS = [
   {
     file: "head-base.png",
     title: "Head base",
-    layer: "Draw only the head skin, face, ears, and neck. Leave out the body, hair, eyes, eyebrows, and mouth.",
+    layer: "Draw only the floating head skin, face, and ears. Do not draw a neck or neck stump. Leave out the body, hair, eyes, eyebrows, and mouth.",
   },
   {
     file: "hair-base.png",
@@ -65,59 +65,48 @@ export function normalizePackName(value) {
     .slice(0, 48);
 }
 
-function backgroundRules(background) {
-  const backgroundRule = background === "transparent"
-    ? "Use a real transparent background with clean alpha edges. No background, checkerboard, or matte color."
-    : "Use a perfectly flat pure white (#FFFFFF) background with no shadow, texture, gradient, border, or scenery.";
-  const backgroundResult = background === "transparent"
-    ? "Return a transparent PNG."
-    : "Return the image on a pure white background.";
-  return { backgroundRule, backgroundResult };
-}
+export function createAvatarSheetLlmPrompt(context) {
+  const layerContract = AVATAR_COMPONENTS
+    .map((component, index) => `${String(index + 1).padStart(2, "0")}. ${component.file} — ${component.layer}`)
+    .join("\n");
 
-export function createAvatarMasterPrompt(context, background = "white") {
-  const { backgroundRule, backgroundResult } = backgroundRules(background);
-  return `Create the master reference image for a layered 2D streaming avatar.
+  return `You are an expert prompt writer for production-ready 2D character asset sheets.
 
-CHARACTER BRIEF
+Turn the short character context below into one exact image-generation prompt. The prompt must produce one single dress-up template image containing all 14 Stream Bro Avatar V1 parts as separate, non-overlapping art pieces.
+
+CHARACTER CONTEXT
 ${context.trim()}
 
-MASTER CHARACTER
-- Draw one complete, polished half-body character facing straight at the camera.
-- Neutral pose, level shoulders, no head tilt, no perspective angle.
-- Eyes fully open. Eyebrows relaxed. Mouth closed and relaxed.
-- Include the final body, clothes, head, face, hair, eyes, eyebrows, and idle mouth.
-- Use one square canvas. 512 by 512 pixels is recommended.
-- Keep the full avatar inside a safe margin. Center the head, neck, and body.
-- ${backgroundRule}
-- No text, labels, border, watermark, props, extra views, layer sheet, or alternate expressions.
+REQUIRED OUTPUT
+- Return only the final image prompt.
+- Do not add a preface, explanation, markdown, quotation marks, or follow-up question.
+- Expand the short context into a clear, coherent character design. Keep unspecified choices tasteful and consistent.
+- Describe one polished 2D art style, one fixed color palette, and even front lighting.
 
-This image will be attached as the fixed visual reference for every separate avatar layer. Make the design clear, consistent, and easy to separate. ${backgroundResult}`;
-}
+IMAGE AND LAYOUT CONTRACT
+- One high-resolution portrait asset sheet on a perfectly flat pure white (#FFFFFF) background.
+- A clean dress-up / paper-doll template, not an assembled character, scene, turnaround, or pose sheet.
+- Show exactly 14 isolated pieces with generous empty space between them. Nothing may touch, overlap, or be cropped.
+- No text, labels, numbers, arrows, borders, cell lines, swatches, shadows, glow, scenery, props, watermark, or signature.
+- Every piece uses the same straight-on orthographic camera, neutral pose, scale logic, line work, rendering, colors, and lighting.
+- Use a strict reading-order layout: three large base pieces first, then two eye pieces, then nine mouth pieces.
+- Preserve bilateral symmetry and a level head. No perspective tilt or three-quarter view.
+- The body is a front-facing half body with level shoulders and relaxed arms.
+- The body and head must be two clearly separate pieces with a wide white gap between them.
+- Show the head as a clean floating head. Do not draw a neck, neck skin, or neck stump on the head or body.
+- The head, hair, eye pairs, and mouth shapes must be mutually compatible when centered over the body.
+- Do not show a complete assembled avatar anywhere on the sheet.
+- Each piece must contain only the named content. Do not repeat skin, face, hair, eyes, mouth, clothing, or outlines from another piece.
 
-export function createAvatarLayerPrompt(component, context, background = "white") {
-  const { backgroundRule, backgroundResult } = backgroundRules(background);
+EXACT 14-PIECE LAYER CONTRACT, IN READING ORDER
+${layerContract}
 
-  return `Create one separate production-ready layer for a 2D streaming avatar.
+CONSISTENCY CHECK
+- The open and closed eye pairs have identical size and placement relative to each other.
+- All nine mouths belong to the same character and keep one consistent width, center point, lip style, teeth style, and tongue style while changing only the requested articulation.
+- The hair fits the bare head silhouette.
+- The floating head ends cleanly at the jaw and chin. The body may have a collar opening, but it must not contain a neck.
+- The result must be easy to cut into 14 separate PNG layers and assemble in a layered avatar editor.
 
-REFERENCE REQUIRED
-Use the attached master character image as the only design and alignment reference. Keep its exact character identity, proportions, pose, colors, clothes, line work, lighting, canvas, scale, and position. Do not redesign or recenter anything.
-
-LAYER TO CREATE
-${component.title} (${component.file})
-${component.layer}
-
-LAYER RULES
-- Output one square PNG using the exact same canvas size as the attached master image.
-- ${backgroundRule}
-- Keep the requested art at the exact coordinates it occupies in the master image.
-- Remove every unrequested avatar part. Do not redraw hidden parts.
-- No glow, text, labels, border, watermark, or extra objects.
-- Do not move, crop, resize, rotate, restyle, or improve the character.
-
-CHARACTER REMINDER
-${context.trim()}
-
-FINAL CHECK
-The result must overlay the attached master perfectly at coordinate 0,0. ${backgroundResult}`;
+Write the final prompt now.`;
 }

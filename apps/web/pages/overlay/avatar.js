@@ -64,7 +64,7 @@ export default function AvatarOverlayRenderer() {
           height: 100%;
           margin: 0;
           overflow: hidden;
-          background: transparent !important;
+          background: #00ff00 !important;
         }
       `}</style>
       <main className="avatar-overlay-output" aria-label="Stream Bro OBS avatar overlay">

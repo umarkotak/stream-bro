@@ -108,6 +108,7 @@ export default function AvatarV1PsdEditor() {
       alternate={isAlternate}
       preview={previewVisible}
       publicAvatarExport={AvatarV1ObsExport}
+      directTransformHandles
     />
   );
 }
