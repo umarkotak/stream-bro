@@ -2,9 +2,9 @@
 
 ## Now
 
-- [x] Product home with feature navigation.
-- [x] One consolidated `/studio/avatar-v1` route.
-- [x] One matching `/editor/psd/avatar-v1` route with PSD import and export.
+- [x] Creator Buddy product home with shadcn sidebar navigation.
+- [x] One consolidated `/virtual-avatar/v1/studio` route.
+- [x] One matching `/virtual-avatar/v1/editor` route with PSD import and export.
 - [x] Separate body, head, and hair V1 motion groups.
 - [x] Slow body movement inferred from camera face position.
 - [x] Independent head yaw, pitch, and tilt.
@@ -15,16 +15,17 @@
 - [x] Selection-first PSD editing with horizontal-center snap and free Y movement.
 - [x] Selected-layer rotation and direct pen/eraser drawing in both PSD editors.
 - [x] Fixed desktop PSD workspace with left tools, center canvas, and right layer stack.
-- [x] V2 studio and editor remain available.
 - [x] Compact full-width desktop application shell.
-- [x] OBS-ready transparent browser-source setup and output routes.
+- [x] OBS-ready `/virtual-avatar/v1/live` setup and output routes.
+- [x] Fixed shadcn studio toolbar with breadcrumb navigation and in-stage camera picture-in-picture.
+- [x] Flexible shadcn Avatar Prompt Builder with an explicit 4×4 sheet contract and grid-ordered layer breakdown.
 
 ## User asset TODO
 
-Create aligned square art, then paste it into `/editor/psd/avatar-v1` or import a compatible PSD:
+Create aligned square art, then paste it into `/virtual-avatar/v1/editor` or import a compatible PSD:
 
 - [ ] `body-base.png` — body and clothes only
-- [ ] `head-base.png` — head, face skin, ears, and neck
+- [ ] `head-base.png` — floating head, face skin, and ears only
 - [ ] `hair-base.png`
 - [ ] `eye-state-open.png`
 - [ ] `eye-state-closed.png`
@@ -43,4 +44,3 @@ Create aligned square art, then paste it into `/editor/psd/avatar-v1` or import 
 - Choose the first art style and avatar name.
 - Decide whether V1 later needs true pose landmarks instead of face-position body inference.
 - Decide whether to add a virtual-camera output after the browser-source URL.
-- Decide whether V2 should reuse or improve the V1 audio vowel classifier.

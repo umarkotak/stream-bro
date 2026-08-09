@@ -1,6 +1,6 @@
 ---
 name: product-engineer
-description: Core entry point for planning, building, fixing, reviewing, and shipping Stream Bro product work across frontend, backend, data, and developer experience. Use for every product or code change in this repository.
+description: Core entry point for planning, building, fixing, reviewing, and shipping Creator Buddy product work across frontend, backend, data, and developer experience. Use for every product or code change in this repository.
 ---
 
 # Product Engineer

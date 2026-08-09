@@ -28,13 +28,18 @@ export const DEFAULT_OVERLAY_CONFIG = Object.freeze({
 
 export const EMPTY_OVERLAY_EXPRESSION = V1_EMPTY_EXPRESSION;
 
+const LEGACY_PACK_IDS = {
+  "stream-bro-avatar-v1": "creator-buddy-avatar-v1",
+};
+
 export function clampOverlayNumber(value, min, max, fallback) {
   const number = Number(value);
   return Number.isFinite(number) ? Math.max(min, Math.min(max, number)) : fallback;
 }
 
 export function normalizeOverlayConfig(value = {}) {
-  const pack = /^[a-z0-9-]{1,48}$/.test(value.pack || "") ? value.pack : DEFAULT_OVERLAY_CONFIG.pack;
+  const requestedPack = LEGACY_PACK_IDS[value.pack] || value.pack;
+  const pack = /^[a-z0-9-]{1,48}$/.test(requestedPack || "") ? requestedPack : DEFAULT_OVERLAY_CONFIG.pack;
   return {
     pack,
     tracking: value.tracking === true || value.tracking === "1",
@@ -67,7 +72,7 @@ export function buildOverlayPath(config, revision = Date.now()) {
     y: String(normalized.y),
     v: String(revision),
   });
-  return `/overlay/avatar?${params.toString()}`;
+  return `/virtual-avatar/v1/live/avatar?${params.toString()}`;
 }
 
 export function packSupportsVoice(files = []) {

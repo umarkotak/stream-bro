@@ -1,5 +1,7 @@
 const MAX_IMAGE_EDGE = 2048;
 const TARGET_PIECES = 14;
+const GRID_COLUMNS = 4;
+const GRID_ROWS = 4;
 
 function loadImage(file) {
   return new Promise((resolve, reject) => {
@@ -180,9 +182,24 @@ function mergeToTarget(components) {
     };
     groups.splice(bestRight, 1);
   }
-  return groups.sort((left, right) => {
-    const yDifference = left.minY - right.minY;
-    return Math.abs(yDifference) > 12 ? yDifference : left.minX - right.minX;
+  return groups;
+}
+
+function orderGridComponents(components, width, height) {
+  const cellWidth = width / GRID_COLUMNS;
+  const cellHeight = height / GRID_ROWS;
+  const cellIndex = (component) => {
+    const centerX = (component.minX + component.maxX) / 2;
+    const centerY = (component.minY + component.maxY) / 2;
+    const column = Math.max(0, Math.min(GRID_COLUMNS - 1, Math.floor(centerX / cellWidth)));
+    const row = Math.max(0, Math.min(GRID_ROWS - 1, Math.floor(centerY / cellHeight)));
+    return (row * GRID_COLUMNS) + column;
+  };
+
+  return [...components].sort((left, right) => {
+    const cellDifference = cellIndex(left) - cellIndex(right);
+    if (cellDifference) return cellDifference;
+    return left.minY - right.minY || left.minX - right.minX;
   });
 }
 
@@ -207,7 +224,11 @@ export async function breakdownAvatarSheet(file) {
   const foreground = findForeground(imageData);
   context.putImageData(imageData, 0, 0);
 
-  const components = mergeToTarget(findComponents(foreground, width, height));
+  const components = orderGridComponents(
+    mergeToTarget(findComponents(foreground, width, height)),
+    width,
+    height,
+  );
   if (!components.length) throw new Error("No separated artwork was found. Use a white or transparent background.");
 
   const padding = Math.max(4, Math.round(Math.min(width, height) * 0.006));
@@ -235,7 +256,7 @@ export async function breakdownAvatarSheet(file) {
     });
   }
 
-  return { width, height, pieces };
+  return { width, height, pieces, grid: { columns: GRID_COLUMNS, rows: GRID_ROWS } };
 }
 
 export function revokeBreakdown(result) {

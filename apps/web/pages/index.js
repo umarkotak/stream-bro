@@ -1,48 +1,42 @@
 import Head from "next/head";
 import Link from "next/link";
-import SiteHeader from "@/components/SiteHeader";
+import { ArrowUpRight, PencilRuler, Radio, Sparkles } from "lucide-react";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-const groups = [
-  {
-    title: "Studios",
-    items: [
-      ["Avatar V1", "Fluid 14-layer PSD tracking", "/studio/avatar-v1"],
-      ["Avatar V2", "Detailed PSD and robust tracking", "/studio/avatar-v2"],
-    ],
-  },
-  {
-    title: "PSD Editors",
-    items: [
-      ["Avatar V1 Editor", "Build or import the 14-layer PSD", "/editor/psd/avatar-v1"],
-      ["Avatar V2 Editor", "Detailed facial-part PSD", "/editor/psd/avatar-v2"],
-    ],
-  },
-  {
-    title: "Tools",
-    items: [
-      ["OBS Overlay", "Configure a transparent avatar browser source", "/overlay"],
-      ["Prompt Builder", "Create, split, and export a V1 dress-up sheet", "/avatar-helper"],
-    ],
-  },
+const avatarTools = [
+  { title: "Studio", detail: "Load a layered avatar and animate it with your camera and microphone.", href: "/virtual-avatar/v1/studio", icon: Sparkles },
+  { title: "Live", detail: "Set up a browser-source URL for your OBS scene.", href: "/virtual-avatar/v1/live", icon: Radio },
+  { title: "Editor", detail: "Build, paint, import, and export the layered avatar PSD.", href: "/virtual-avatar/v1/editor", icon: PencilRuler },
 ];
 
 export default function Home() {
   return (
     <>
-      <Head><title>Stream Bro</title><meta name="description" content="Local avatar tools for OBS." /></Head>
-      <div className="site-shell compact-app"><SiteHeader />
-        <main className="compact-main home-dashboard">
-          <header className="compact-page-head"><div><h1>Stream Bro</h1><span>Local avatar tools for OBS</span></div></header>
-          {groups.map((group) => (
-            <section className="dashboard-group" key={group.title}>
-              <h2>{group.title}</h2>
-              <div className="dashboard-grid">
-                {group.items.map(([title, detail, href]) => <Link href={href} key={href}><b>{title}</b><span>{detail}</span><i>↗</i></Link>)}
-              </div>
-            </section>
-          ))}
-        </main>
-      </div>
+      <Head><title>Creator Buddy</title><meta name="description" content="Local avatar tools for OBS creators." /></Head>
+      <main className="creator-home">
+        <header className="creator-home-intro">
+          <p>Creator Buddy</p>
+          <h1>Your virtual avatar workspace.</h1>
+          <span>Make, animate, and take your avatar live in OBS without sending camera or microphone data away.</span>
+        </header>
+        <section aria-labelledby="virtual-avatar-heading">
+          <div className="creator-section-heading"><div><p>Virtual Avatar</p><h2 id="virtual-avatar-heading">Create once. Go live anywhere.</h2></div></div>
+          <div className="creator-tool-grid">
+            {avatarTools.map(({ title, detail, href, icon: Icon }) => (
+              <Link href={href} key={href} className="creator-tool-link">
+                <Card className="h-full transition-colors hover:bg-accent">
+                  <CardHeader>
+                    <Icon className="size-5 text-primary" />
+                    <CardTitle>{title}</CardTitle>
+                    <CardDescription>{detail}</CardDescription>
+                  </CardHeader>
+                  <ArrowUpRight className="absolute right-4 top-4 size-4 text-muted-foreground" />
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </section>
+      </main>
     </>
   );
 }

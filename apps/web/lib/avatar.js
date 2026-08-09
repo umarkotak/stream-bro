@@ -55,6 +55,13 @@ export const AVATAR_COMPONENTS = [
   { file: "mouth-state-o.png", title: "Mouth O", layer: "Draw only a large rounded O vowel mouth. Do not draw any other avatar part." },
 ];
 
+export const AVATAR_SHEET_GRID = [
+  ["body-base.png", "head-base.png", "hair-base.png", null],
+  ["eye-state-open.png", "eye-state-closed.png", "mouth-state-idle.png", "mouth-state-small.png"],
+  ["mouth-state-medium.png", "mouth-state-wide.png", "mouth-state-a.png", "mouth-state-i.png"],
+  ["mouth-state-u.png", "mouth-state-e.png", "mouth-state-o.png", null],
+];
+
 export function normalizePackName(value) {
   return value
     .toLowerCase()
@@ -72,7 +79,7 @@ export function createAvatarSheetLlmPrompt(context) {
 
   return `You are an expert prompt writer for production-ready 2D character asset sheets.
 
-Turn the short character context below into one exact image-generation prompt. The prompt must produce one single dress-up template image containing all 14 Stream Bro Avatar V1 parts as separate, non-overlapping art pieces.
+Turn the short character context below into one exact image-generation prompt. The prompt must produce one single dress-up template image containing all 14 Creator Buddy avatar parts as separate, non-overlapping art pieces.
 
 CHARACTER CONTEXT
 ${context.trim()}
@@ -84,12 +91,14 @@ REQUIRED OUTPUT
 - Describe one polished 2D art style, one fixed color palette, and even front lighting.
 
 IMAGE AND LAYOUT CONTRACT
-- One high-resolution portrait asset sheet on a perfectly flat pure white (#FFFFFF) background.
+- One high-resolution square asset sheet on a perfectly flat pure white (#FFFFFF) background.
 - A clean dress-up / paper-doll template, not an assembled character, scene, turnaround, or pose sheet.
-- Show exactly 14 isolated pieces with generous empty space between them. Nothing may touch, overlap, or be cropped.
-- No text, labels, numbers, arrows, borders, cell lines, swatches, shadows, glow, scenery, props, watermark, or signature.
+- Use an invisible, exact 4-column by 4-row grid. The grid is a placement rule only: do not draw cell lines, borders, labels, numbers, or guides.
+- Place exactly one isolated asset entirely inside each occupied cell and leave the two empty cells completely pure white. Keep a generous white margin inside every cell so no asset touches, overlaps, or crosses a cell boundary.
+- No text, arrows, swatches, shadows, glow, scenery, props, watermark, or signature.
 - Every piece uses the same straight-on orthographic camera, neutral pose, scale logic, line work, rendering, colors, and lighting.
-- Use a strict reading-order layout: three large base pieces first, then two eye pieces, then nine mouth pieces.
+- Use this exact cell map: row 1 = body-base, head-base, hair-base, EMPTY; row 2 = eyes-open, eyes-closed, mouth-idle, mouth-small; row 3 = mouth-medium, mouth-wide, mouth-A, mouth-I; row 4 = mouth-U, mouth-E, mouth-O, EMPTY.
+- The first three cells are the large base pieces. The eye and mouth cells contain only their small expression assets, centered within their own cells.
 - Preserve bilateral symmetry and a level head. No perspective tilt or three-quarter view.
 - The body is a front-facing half body with level shoulders and relaxed arms.
 - The body and head must be two clearly separate pieces with a wide white gap between them.
@@ -106,7 +115,7 @@ CONSISTENCY CHECK
 - All nine mouths belong to the same character and keep one consistent width, center point, lip style, teeth style, and tongue style while changing only the requested articulation.
 - The hair fits the bare head silhouette.
 - The floating head ends cleanly at the jaw and chin. The body may have a collar opening, but it must not contain a neck.
-- The result must be easy to cut into 14 separate PNG layers and assemble in a layered avatar editor.
+- The result must be easy to cut into 14 separate PNG layers by scanning the occupied cells in row order and assemble in a layered avatar editor.
 
 Write the final prompt now.`;
 }

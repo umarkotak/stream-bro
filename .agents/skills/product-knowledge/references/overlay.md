@@ -6,8 +6,8 @@ Create one copyable URL for an OBS Browser Source. The output page contains only
 
 ## Routes
 
-- `/overlay`: setup page. This is the user entry point.
-- `/overlay/avatar?...`: character-only transparent renderer for OBS.
+- `/virtual-avatar/v1/live`: setup page. This is the user entry point.
+- `/virtual-avatar/v1/live/avatar?...`: character-only transparent renderer for OBS.
 - Opening the renderer without a model query returns the user to setup.
 - Home and main navigation expose Overlay.
 
@@ -40,7 +40,7 @@ Create one copyable URL for an OBS Browser Source. The output page contains only
 - The page has no navigation, controls, text, or checkerboard.
 - HTML, body, and the Next root use a solid `#00ff00` green background. Avatar renderer surfaces stay transparent so the green shows behind the model.
 - The public pack loads directly from stable asset URLs.
-- Tracking uses the same V1 expression shape, motion limits, smoothing, face-center calibration, blink threshold, and mouth bands as `/studio/avatar-v1`.
+- Tracking uses the same expression shape, motion limits, smoothing, face-center calibration, blink threshold, and mouth bands as `/virtual-avatar/v1/studio`.
 - Body, head, and hair render as the same separate V1 motion groups. Hair uses the same subtle lag and gravity response.
 - Legacy packs without `head-base.png` keep their layers aligned with body-only motion.
 - Microphone mode keeps camera head and blink tracking but uses local formant matching for A/I/U/E/O.
