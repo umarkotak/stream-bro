@@ -46,10 +46,7 @@ export default function AvatarOverlayRenderer() {
     return () => { active = false; };
   }, [config.pack, ready]);
 
-  const tracking = useAvatarTracking({
-    enabled: ready && config.tracking,
-    mouthMode: config.mouthMode,
-  });
+  const tracking = useAvatarTracking({ enabled: ready && config.tracking });
   const revision = Array.isArray(router.query.v) ? router.query.v[0] : router.query.v || "1";
 
   return (

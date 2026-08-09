@@ -8,11 +8,11 @@ const DETAILS = {
   "mouth-state-small.png": "Core stable mouth sequence · small speech opening",
   "mouth-state-medium.png": "Core stable mouth sequence · medium speech opening",
   "mouth-state-wide.png": "Core stable mouth sequence · wide speech opening",
-  "mouth-state-a.png": "Experimental microphone vowel · A shape",
-  "mouth-state-i.png": "Experimental microphone vowel · I shape",
-  "mouth-state-u.png": "Experimental microphone vowel · U shape",
-  "mouth-state-e.png": "Experimental microphone vowel · E shape",
-  "mouth-state-o.png": "Experimental microphone vowel · O shape",
+  "mouth-state-a.png": "Reserved future expression layer · A shape",
+  "mouth-state-i.png": "Reserved future expression layer · I shape",
+  "mouth-state-u.png": "Reserved future expression layer · U shape",
+  "mouth-state-e.png": "Reserved future expression layer · E shape",
+  "mouth-state-o.png": "Reserved future expression layer · O shape",
 };
 
 const LAYERS = [

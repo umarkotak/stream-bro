@@ -541,12 +541,7 @@ button { color: inherit; }
 .studio-stage-slot > .avatar-stage, .studio-stage-slot > .psd-stage { width: auto; height: 100%; max-width: 100%; max-height: 100%; margin: 0; }
 .studio-controls-column { min-width: 0; min-height: 0; overflow: auto; padding: 12px; background: #f0eee6; }
 .studio-controls-column .camera-card { aspect-ratio: 16 / 7; margin-bottom: 10px; }
-.voice-meter { overflow: hidden; border: 1px solid #77786f; background: #11120f; }
-.voice-meter i { height: 100%; display: block; background: var(--lime); transition: width 80ms linear; }
 .source-control { padding-top: 2px; border-top: 0; }
-.voice-inline { display: grid; grid-template-columns: 54px minmax(0, 1fr) auto; align-items: center; gap: 8px; margin: -2px 0 10px; padding: 8px 10px; border: 1px solid var(--ink); background: #272820; color: white; font-size: 7px; font-weight: 850; }
-.voice-inline .voice-meter { height: 8px; }
-.voice-inline small { color: #b9baae; font: 7px ui-monospace, monospace; }
 .compact-range { width: 100%; accent-color: var(--ink); }
 .studio-controls-column .control-section { padding: 13px 0; }
 .studio-controls-column .control-heading { margin-bottom: 9px; }

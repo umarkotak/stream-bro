@@ -4,7 +4,7 @@ import { ArrowUpRight, PencilRuler, Radio, Sparkles } from "lucide-react";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const avatarTools = [
-  { title: "Studio", detail: "Load a layered avatar and animate it with your camera and microphone.", href: "/virtual-avatar/v1/studio", icon: Sparkles },
+  { title: "Studio", detail: "Load a layered avatar and animate it with camera tracking.", href: "/virtual-avatar/v1/studio", icon: Sparkles },
   { title: "Live", detail: "Set up a browser-source URL for your OBS scene.", href: "/virtual-avatar/v1/live", icon: Radio },
   { title: "Editor", detail: "Build, paint, import, and export the layered avatar PSD.", href: "/virtual-avatar/v1/editor", icon: PencilRuler },
 ];
@@ -17,7 +17,7 @@ export default function Home() {
         <header className="creator-home-intro">
           <p>Creator Buddy</p>
           <h1>Your virtual avatar workspace.</h1>
-          <span>Make, animate, and take your avatar live in OBS without sending camera or microphone data away.</span>
+          <span>Make, animate, and take your avatar live in OBS without sending camera data away.</span>
         </header>
         <section aria-labelledby="virtual-avatar-heading">
           <div className="creator-section-heading"><div><p>Virtual Avatar</p><h2 id="virtual-avatar-heading">Create once. Go live anywhere.</h2></div></div>

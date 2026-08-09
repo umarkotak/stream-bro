@@ -5,7 +5,7 @@ description: Maintain and retrieve Creator Buddy product truth with a tiny core 
 
 # Product Knowledge
 
-Creator Buddy is a local-first streaming toolkit for OBS creators. Its virtual-avatar tools turn camera and optional microphone input into layered avatar animation, its PSD editor supports layer transforms and direct drawing, and its live tool creates transparent OBS browser-source URLs. The web app lives in `apps/web` and uses Next.js with shadcn UI primitives.
+Creator Buddy is a local-first streaming toolkit for OBS creators. Its virtual-avatar tools turn camera input into layered avatar animation, its PSD editor supports layer transforms and direct drawing, and its live tool creates transparent OBS browser-source URLs. The web app lives in `apps/web` and uses Next.js with shadcn UI primitives.
 
 ## Knowledge rule
 

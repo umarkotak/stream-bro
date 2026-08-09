@@ -107,7 +107,7 @@ IMAGE AND LAYOUT CONTRACT
 - Do not show a complete assembled avatar anywhere on the sheet.
 - Each piece must contain only the named content. Do not repeat skin, face, hair, eyes, mouth, clothing, or outlines from another piece.
 - Treat idle, small, medium, and wide as the primary stable mouth-animation sequence: keep their center point, width logic, line weight, lip details, and scale consistent while only the opening amount changes.
-- Treat A, I, U, E, and O as an optional expressive voice set. Keep them compatible with the primary sequence, but never substitute vowel shapes for idle, small, medium, or wide.
+- Keep A, I, U, E, and O as reserved compatibility layers. Keep them compatible with the primary sequence, but never substitute them for idle, small, medium, or wide.
 
 EXACT 14-PIECE LAYER CONTRACT, IN READING ORDER
 ${layerContract}

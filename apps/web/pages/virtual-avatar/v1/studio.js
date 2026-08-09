@@ -1,7 +1,7 @@
 import Head from "next/head";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Camera, CircleStop, FileUp, Mic, PencilRuler, Radio, Video } from "lucide-react";
+import { Camera, CircleStop, FileUp, PencilRuler, Radio, Video } from "lucide-react";
 import StudioWorkspace from "@/components/StudioWorkspace";
 import V1PsdAvatarStage from "@/components/V1PsdAvatarStage";
 import { Badge } from "@/components/ui/badge";
@@ -9,15 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Slider } from "@/components/ui/slider";
-import { AUDIO_VOWEL_CONFIG } from "@/lib/audio-vowel";
-import {
-  MOUTH_ANIMATION_MODES,
-  VIDEO_MOUTH_STATES,
-  VOWEL_MOUTH_STATES,
-  mouthModeUsesMicrophone,
-  normalizeMouthMode,
-} from "@/lib/avatar-mouth";
+import { VIDEO_MOUTH_STATES } from "@/lib/avatar-mouth";
 import { useAvatarTracking } from "@/lib/avatar-tracking";
 import {
   V1_EMPTY_EXPRESSION,
@@ -27,14 +19,14 @@ import {
 } from "@/lib/avatar-v1-psd";
 import { readNamedPsd, revokePsdModel } from "@/lib/psd-loader";
 
-function trackingMessage({ model, requested, state, mouthMode, loadError }) {
+function trackingMessage({ model, requested, state, loadError }) {
   if (loadError) return loadError;
   if (!model) return "Load an avatar PSD";
   if (!requested) return "PSD ready · manual preview";
   if (state === "starting") return "Requesting camera and tracker…";
   if (state === "searching") return "Camera live · looking for a face";
-  if (state === "blocked") return `${mouthModeUsesMicrophone(mouthMode) ? "Camera or microphone" : "Camera"} blocked · manual preview still works`;
-  return `Tracking live · ${MOUTH_ANIMATION_MODES[mouthMode].label.toLowerCase()}`;
+  if (state === "blocked") return "Camera blocked · manual preview still works";
+  return "Tracking live · camera mouth";
 }
 
 export default function AvatarV1Studio() {
@@ -42,16 +34,10 @@ export default function AvatarV1Studio() {
   const modelRef = useRef(null);
   const [model, setModel] = useState(null);
   const [manualExpression, setManualExpression] = useState(V1_EMPTY_EXPRESSION);
-  const [mouthMode, setMouthMode] = useState("camera");
-  const [gate, setGate] = useState(AUDIO_VOWEL_CONFIG.defaultGate);
   const [trackingRequested, setTrackingRequested] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState("");
-  const tracking = useAvatarTracking({
-    enabled: trackingRequested && Boolean(model),
-    mouthMode,
-    gate,
-  });
+  const tracking = useAvatarTracking({ enabled: trackingRequested && Boolean(model) });
 
   useEffect(() => () => revokePsdModel(modelRef.current), []);
 
@@ -78,13 +64,6 @@ export default function AvatarV1Studio() {
     finally { setIsLoading(false); }
   }
 
-  function selectMouthMode(next) {
-    const normalized = normalizeMouthMode(next);
-    setTrackingRequested(false);
-    setMouthMode(normalized);
-    setManualExpression((current) => ({ ...current, mouth: "idle" }));
-  }
-
   function setManual(next) {
     setTrackingRequested(false);
     setManualExpression((current) => ({ ...current, ...next }));
@@ -93,10 +72,7 @@ export default function AvatarV1Studio() {
   const foundCount = model ? V1_PSD_ALL_LAYER_NAMES.length - model.missing.length : 0;
   const activeExpression = trackingRequested ? tracking.expression : manualExpression;
   const trackingLive = trackingRequested && tracking.status === "tracking";
-  const status = trackingMessage({ model, requested: trackingRequested, state: tracking.status, mouthMode, loadError });
-  const usesMicrophone = mouthModeUsesMicrophone(mouthMode);
-  const manualMouths = mouthMode === "vowel" ? VOWEL_MOUTH_STATES : VIDEO_MOUTH_STATES;
-  const meter = Math.min(100, (tracking.audioStats.level / Math.max(gate * 5, 0.001)) * 100);
+  const status = trackingMessage({ model, requested: trackingRequested, state: tracking.status, loadError });
 
   return (
     <>
@@ -106,7 +82,7 @@ export default function AvatarV1Studio() {
         live={trackingLive}
         meta={model ? `${foundCount}/14 contract layers ready` : "No PSD loaded"}
         stage={<V1PsdAvatarStage model={model} expression={activeExpression} />}
-        footer={<><span>{activeExpression.eyes} eyes</span><span>{activeExpression.mouth.toUpperCase()} mouth</span><span>{MOUTH_ANIMATION_MODES[mouthMode].label}</span></>}
+        footer={<><span>{activeExpression.eyes} eyes</span><span>{activeExpression.mouth.toUpperCase()} mouth</span><span>camera input</span></>}
         toolbar={<>
           <input ref={psdInputRef} className="sr-only" type="file" accept=".psd,image/vnd.adobe.photoshop" onChange={loadPsd} disabled={isLoading} />
           <Button type="button" variant="outline" size="sm" onClick={() => psdInputRef.current?.click()} disabled={isLoading}>
@@ -123,23 +99,13 @@ export default function AvatarV1Studio() {
           )}
         </>}
         inspector={<>
-          <header className="avatar-studio-panel-header"><div><h2>Expression</h2><p>One shared mouth system</p></div><Badge variant="outline">{trackingRequested ? tracking.status : "manual"}</Badge></header>
+          <header className="avatar-studio-panel-header"><div><h2>Expression</h2><p>Camera-driven mouth animation</p></div><Badge variant="outline">{trackingRequested ? tracking.status : "manual"}</Badge></header>
           <ScrollArea className="avatar-studio-panel-scroll">
             <div className="avatar-studio-panel-content">
               <section className="avatar-studio-control-group">
-                <span>Mouth animation</span>
-                <Select value={mouthMode} onValueChange={(value) => value && selectMouthMode(value)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(MOUTH_ANIMATION_MODES).map(([value, option]) => <SelectItem value={value} key={value}>{option.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <p className="text-[11px] leading-4 text-muted-foreground">{MOUTH_ANIMATION_MODES[mouthMode].description}</p>
+                <span>Camera mouth</span>
+                <p className="text-[11px] leading-4 text-muted-foreground">Smoothed jaw-open tracking selects idle, small, medium, or wide. It stays local and never requests a microphone.</p>
               </section>
-              {usesMicrophone && <section className="avatar-studio-control-group">
-                <span>Voice sensitivity <b>{gate.toFixed(3)}</b></span>
-                <Slider min={0.006} max={0.06} step={0.002} value={gate} onValueChange={setGate} aria-label="Voice sensitivity" />
-              </section>}
               <section className="avatar-studio-control-group">
                 <span>Manual eyes</span>
                 <Select value={activeExpression.eyes} onValueChange={(value) => value && setManual({ eyes: value })}>
@@ -151,7 +117,7 @@ export default function AvatarV1Studio() {
                 <span>Manual mouth</span>
                 <Select value={activeExpression.mouth} onValueChange={(value) => value && setManual({ mouth: value })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{manualMouths.map((mouth) => <SelectItem value={mouth} key={mouth}>{mouth.toUpperCase()}</SelectItem>)}</SelectContent>
+                  <SelectContent>{VIDEO_MOUTH_STATES.map((mouth) => <SelectItem value={mouth} key={mouth}>{mouth.toUpperCase()}</SelectItem>)}</SelectContent>
                 </Select>
               </section>
             </div>
@@ -174,7 +140,6 @@ export default function AvatarV1Studio() {
             <video ref={tracking.videoRef} muted playsInline />
             {!trackingRequested && <div className="avatar-studio-camera-empty"><Video /><span>Camera is off</span></div>}
           </div>
-          {usesMicrophone && <footer><Mic />{trackingRequested ? `${activeExpression.mouth.toUpperCase()} · ${mouthMode === "vowel" && tracking.audioStats.f1 ? `${Math.round(tracking.audioStats.f1)} / ${Math.round(tracking.audioStats.f2)} Hz` : "Listening"}` : "Microphone idle"}<i style={{ width: `${meter}%` }} /></footer>}
         </>}
       />
     </>

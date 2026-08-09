@@ -9,8 +9,7 @@
 - [x] Slow body movement inferred from camera face position.
 - [x] Independent head yaw, pitch, and tilt.
 - [x] Subtle hair lag and gravity response.
-- [x] Video and microphone mouth input options.
-- [x] Local A/I/U/E/O microphone mouth selection.
+- [x] Camera-only mouth input with stable idle, small, medium, and wide states.
 - [x] Master-reference prompt flow with selectable V1 derivative layers.
 - [x] Selection-first PSD editing with horizontal-center snap and free Y movement.
 - [x] Selected-layer rotation and direct pen/eraser drawing in both PSD editors.
@@ -19,7 +18,7 @@
 - [x] OBS-ready `/virtual-avatar/v1/live` setup and output routes.
 - [x] Fixed shadcn studio toolbar with breadcrumb navigation and in-stage camera picture-in-picture.
 - [x] Flexible shadcn Avatar Prompt Builder with an explicit 4×4 sheet contract and grid-ordered layer breakdown.
-- [x] Shared stable mouth-animation controller for Studio and OBS, with camera motion, microphone level, and experimental vowel modes.
+- [x] Shared frame-aligned camera mouth controller for Studio and OBS.
 
 ## User asset TODO
 

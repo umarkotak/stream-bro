@@ -18,9 +18,7 @@ import {
   buildOverlayPath,
   fetchOverlayPacks,
   normalizeOverlayConfig,
-  packSupportsMouthMode,
 } from "@/lib/avatar-overlay";
-import { MOUTH_ANIMATION_MODES } from "@/lib/avatar-mouth";
 
 const STORAGE_KEY = "creator-buddy-overlay-config-v1";
 const LEGACY_STORAGE_KEY = "stream-bro-overlay-config-v1";
@@ -51,8 +49,7 @@ export default function OverlaySetup() {
       setPacks(nextPacks);
       setConfig((current) => {
         const selected = nextPacks.find((pack) => pack.id === current.pack) || nextPacks[0];
-        const mouthMode = packSupportsMouthMode(selected.files, current.mouthMode) ? current.mouthMode : "volume";
-        return { ...current, pack: selected.id, mouthMode };
+        return { ...current, pack: selected.id };
       });
       setRevision(String(Date.now()));
       setPackState("ready");
@@ -77,10 +74,7 @@ export default function OverlaySetup() {
 
   function selectPack(packId) {
     const pack = packs.find((item) => item.id === packId);
-    update({
-      pack: packId,
-      mouthMode: packSupportsMouthMode(pack?.files, config.mouthMode) ? config.mouthMode : "volume",
-    });
+    update({ pack: pack?.id || packId });
     setRevision(String(Date.now()));
   }
 
@@ -154,21 +148,11 @@ export default function OverlaySetup() {
               </Card>
 
               <Card size="sm">
-                <CardHeader><CardTitle>2. Animation</CardTitle><CardDescription>The same controller runs in Studio and OBS.</CardDescription></CardHeader>
+                <CardHeader><CardTitle>2. Camera animation</CardTitle><CardDescription>The same camera-only controller runs in Studio and OBS.</CardDescription></CardHeader>
                 <CardContent className="grid gap-4">
                   <div className="flex items-center justify-between gap-3 rounded-md border border-border p-2.5">
-                    <div><Label htmlFor="overlay-tracking">Start tracking in OBS</Label><p className="mt-1 text-xs text-muted-foreground">Camera controls body, head, eyes, and mouth.</p></div>
+                    <div><Label htmlFor="overlay-tracking">Start camera tracking in OBS</Label><p className="mt-1 text-xs text-muted-foreground">Camera controls body, head, eyes, and the four stable mouth shapes.</p></div>
                     <Switch id="overlay-tracking" checked={config.tracking} onCheckedChange={(tracking) => update({ tracking })} />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="overlay-mouth-mode">Mouth animation</Label>
-                    <Select value={config.mouthMode} onValueChange={(mouthMode) => update({ mouthMode })} disabled={!canUseOverlay}>
-                      <SelectTrigger id="overlay-mouth-mode"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(MOUTH_ANIMATION_MODES).map(([value, option]) => <SelectItem value={value} key={value} disabled={!packSupportsMouthMode(selectedPack?.files, value)}>{option.label}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs leading-4 text-muted-foreground">{MOUTH_ANIMATION_MODES[config.mouthMode].description}</p>
                   </div>
                 </CardContent>
               </Card>

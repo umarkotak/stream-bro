@@ -2,7 +2,7 @@
 
 ## Goal
 
-Create one copyable URL for an OBS Browser Source. The output page contains only the avatar on a solid `#00ff00` green background for chroma keying. Camera and optional microphone processing stay local inside the browser source.
+Create one copyable URL for an OBS Browser Source. The output page contains only the avatar on a solid `#00ff00` green background for chroma keying. Camera processing stays local inside the browser source.
 
 ## Routes
 
@@ -29,7 +29,7 @@ Create one copyable URL for an OBS Browser Source. The output page contains only
 - Model selection lists public packs.
 - Tracking can be on or off.
 - Camera mouth tracking is always available.
-- Mouth animation has three shared modes: Camera motion (default), Microphone level (stable speech movement using the four core mouth layers), and Microphone vowels (experimental and available only with all five vowel layers).
+- Camera is the only active input. The shared controller uses the smoothed `jawOpen` blendshape to select idle, small, medium, and wide mouth states.
 - Scale, horizontal position, and vertical position are encoded in the URL.
 - Setup is saved in local storage.
 - The page provides Copy overlay URL and Open overlay actions.
@@ -43,15 +43,13 @@ Create one copyable URL for an OBS Browser Source. The output page contains only
 - Tracking uses the same expression shape, motion limits, smoothing, face-center calibration, blink threshold, and mouth bands as `/virtual-avatar/v1/studio`.
 - Body, head, and hair render as the same separate V1 motion groups. Hair uses the same subtle lag and gravity response.
 - Legacy packs without `head-base.png` keep their layers aligned with body-only motion.
-- Microphone mode keeps camera head and blink tracking but uses local formant matching for A/I/U/E/O.
 - If media access or the tracker fails, the avatar stays visible in its idle pose.
-- All media tracks, animation frames, the face landmarker, and audio nodes close when the source unloads.
+- All camera tracks, scheduled frame callbacks, and the face landmarker close when the source unloads.
 
 ## URL contract
 
 - `pack`: public avatar pack ID.
 - `tracking`: `1` for automatic local tracking, `0` for idle pose.
-- `mouth`: `camera`, `volume`, or `vowel`. Legacy `video` and `voice` values normalize to `camera` and `volume`.
 - `scale`: 40–180 percent.
 - `x`: horizontal anchor, 0–100 percent.
 - `y`: vertical anchor, 0–100 percent.
@@ -63,5 +61,5 @@ Create one copyable URL for an OBS Browser Source. The output page contains only
 - A valid renderer URL shows only the selected character.
 - The output background remains solid `#00ff00` green in OBS for chroma keying.
 - Position and scale match setup.
-- Camera and supported microphone modes animate locally.
+- Camera tracking animates locally.
 - A blocked camera leaves a clean idle avatar instead of setup or error UI.

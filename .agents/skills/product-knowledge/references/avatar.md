@@ -2,7 +2,7 @@
 
 ## Goal
 
-Load one simple PSD and create a fluid half-body avatar for OBS. Camera tracking drives body position, head rotation, blink, and video mouth states. Microphone mode replaces only mouth input with A/I/U/E/O detection. Processing stays in the browser.
+Load one simple PSD and create a fluid half-body avatar for OBS. Camera tracking drives body position, head rotation, blink, and mouth states. Processing stays in the browser.
 
 ## Product routes
 
@@ -23,7 +23,7 @@ The V1 PSD has 14 required leaf layers. Names include `.png`.
 | Hair | `hair-base.png` |
 | Eyes | `eye-state-open.png`, `eye-state-closed.png` |
 | Video mouth | `mouth-state-idle.png`, `mouth-state-small.png`, `mouth-state-medium.png`, `mouth-state-wide.png` |
-| Microphone mouth | `mouth-state-a.png`, `mouth-state-i.png`, `mouth-state-u.png`, `mouth-state-e.png`, `mouth-state-o.png` |
+| Reserved compatibility | `mouth-state-a.png`, `mouth-state-i.png`, `mouth-state-u.png`, `mouth-state-e.png`, `mouth-state-o.png` |
 
 - `body-base.png` contains only the half body, clothes, shoulders, and arms.
 - `head-base.png` contains a floating head, face skin, and ears without neck, hair, eyes, or mouth.
@@ -42,13 +42,12 @@ The V1 PSD has 14 required leaf layers. Names include `.png`.
 
 ## Mouth input
 
-- Camera motion is the default and most stable mouth mode. It smooths MediaPipe jaw-open values, applies separate enter and exit thresholds, then holds a result briefly before switching between idle, small, medium, and wide.
-- Microphone level is the stable voice alternative. It keeps camera body, head, and blink tracking, and maps local RMS speech volume to the same idle, small, medium, and wide shapes.
-- Microphone vowels are explicitly experimental. They use local Web Audio formant matching for idle and A/I/U/E/O and need the complete vowel layer set.
-- Voice sensitivity is adjustable. A short hold reduces rapid vowel flicker.
-- Camera and microphone permission are requested only after Start tracking is pressed.
+- Camera motion is the only active mouth input. It uses MediaPipe's `jawOpen` blendshape in video mode, smooths the result, applies separate enter and exit thresholds, and holds a result briefly before switching between idle, small, medium, and wide.
+- Detection is scheduled with `requestVideoFrameCallback` when the browser supports it, so inference follows decoded camera frames rather than display refresh; `requestAnimationFrame` is the compatibility fallback.
+- Camera permission is requested only after Start tracking is pressed.
 - Permission or model errors keep manual eyes and mouth controls available.
-- Studio and OBS now use the same browser-side `useAvatarTracking` controller and exact expression state, so the selected mouth mode behaves the same in both places.
+- Studio and OBS use the same browser-side `useAvatarTracking` controller and exact expression state.
+- The five reserved compatibility layers remain in existing PSD and public-pack contracts, but no current page requests a microphone or renders them.
 - The studio is a fixed, no-page-scroll workspace. Its shadcn toolbar contains PSD loading, Studio navigation, and tracking actions. One right settings rail stacks a control inspector above a layer-readiness panel.
 - The shared top navigation shows Home → Virtual Avatar → Studio breadcrumbs in place of the app name. The camera preview floats in the avatar stage's top-right corner, like a call picture-in-picture view.
 - Live setup renders without the shared top bar or sidebar. The editor keeps the shared breadcrumb top bar but hides the sidebar.
@@ -86,7 +85,7 @@ The V1 PSD has 14 required leaf layers. Names include `.png`.
 - The target image is one high-resolution square dress-up sheet using an invisible 4×4 placement grid. It has 14 occupied cells in exact reading order and two intentionally blank cells: A4 and D4.
 - The body and head are separate pieces with a wide gap. The head floats and no neck or neck stump is drawn on the head or body.
 - The sheet uses a flat white background for easy cutting. It has no labels, dividers, complete assembled avatar, overlapping pieces, or artwork crossing a grid-cell boundary.
-- The prompt requires idle, small, medium, and wide to form one consistent stable animation sequence. The five vowel shapes are an optional expressive set and do not replace the four core mouth states.
+- The prompt requires idle, small, medium, and wide to form one consistent camera-animation sequence. The five reserved compatibility layers never replace those four core mouth states.
 - Image Breakdown accepts a selected image file or an image pasted from the system clipboard.
 - Breakdown runs only in the browser. It removes edge-connected transparent or white background, detects separated artwork, groups nearby fragments toward the 14-part contract, and orders results by the 4×4 grid cells.
 - Detected pieces are auto-mapped to V1 layers in grid reading order. The user can inspect each transparent preview and change its one-to-one layer assignment.
@@ -100,7 +99,7 @@ The V1 PSD has 14 required leaf layers. Names include `.png`.
 - Former studio URLs redirect to the new studio.
 - Body, head, and hair move as separate smoothed groups.
 - Exactly one eye state and one mouth state render.
-- Video and microphone mouth modes both use the same 14-layer PSD.
+- Camera mouth tracking uses the same 14-layer PSD.
 - A valid imported or exported PSD keeps layer alignment.
 - The stage remains suitable for OBS capture.
 - The public-pack overlay uses the same expression and body, head, and hair motion rules on a transparent OBS browser source.

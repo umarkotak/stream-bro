@@ -1,12 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  cameraMouthFromJaw,
-  createMouthStateTracker,
-  mouthModeUsesMicrophone,
-  normalizeMouthMode,
-  volumeMouthFromLevel,
-} from "@/lib/avatar-mouth";
-import { AUDIO_VOWEL_CONFIG, readAudioLevel, readAudioVowel } from "@/lib/audio-vowel";
+import { cameraMouthFromJaw, createMouthStateTracker } from "@/lib/avatar-mouth";
 import { V1_AVATAR_MOTION, V1_EMPTY_EXPRESSION } from "@/lib/avatar-v1-psd";
 
 function clamp(value, range) {
@@ -40,81 +33,46 @@ function smoothValue(previous, target, amount) {
   return previous + (target - previous) * amount;
 }
 
-export function useAvatarTracking({ enabled, mouthMode = "camera", gate = AUDIO_VOWEL_CONFIG.defaultGate }) {
+export function useAvatarTracking({ enabled }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const landmarkerRef = useRef(null);
-  const audioContextRef = useRef(null);
-  const audioSourceRef = useRef(null);
-  const analyserRef = useRef(null);
   const frameRef = useRef(null);
-  const timeDataRef = useRef(null);
-  const spectrumRef = useRef(null);
   const bodyOriginRef = useRef(null);
   const smoothRef = useRef(V1_EMPTY_EXPRESSION);
-  const mouthTrackerRef = useRef(createMouthStateTracker({ stableFrames: 3, idleFrames: 2 }));
+  const mouthTrackerRef = useRef(createMouthStateTracker());
   const jawRef = useRef(0);
-  const gateRef = useRef(gate);
   const activeRef = useRef(false);
   const [expression, setExpression] = useState(V1_EMPTY_EXPRESSION);
   const [status, setStatus] = useState(enabled ? "starting" : "static");
-  const [audioStats, setAudioStats] = useState({ level: 0, f1: 0, f2: 0 });
-
-  useEffect(() => { gateRef.current = gate; }, [gate]);
 
   const release = useCallback(() => {
     activeRef.current = false;
-    cancelAnimationFrame(frameRef.current);
-    audioSourceRef.current?.disconnect();
+    const scheduled = frameRef.current;
+    if (scheduled?.type === "video") videoRef.current?.cancelVideoFrameCallback?.(scheduled.id);
+    else if (scheduled?.id) cancelAnimationFrame(scheduled.id);
     streamRef.current?.getTracks().forEach((track) => track.stop());
     landmarkerRef.current?.close();
-    audioContextRef.current?.close().catch(() => {});
     if (videoRef.current) videoRef.current.srcObject = null;
     frameRef.current = null;
-    audioSourceRef.current = null;
     streamRef.current = null;
     landmarkerRef.current = null;
-    analyserRef.current = null;
-    audioContextRef.current = null;
-    timeDataRef.current = null;
-    spectrumRef.current = null;
   }, []);
 
-  const readMouth = useCallback((mode) => {
-    const normalizedMode = normalizeMouthMode(mode);
-    const tracker = mouthTrackerRef.current;
-    if (normalizedMode === "camera") return tracker.shown;
-    const analyser = analyserRef.current;
-    if (!analyser || !timeDataRef.current || !spectrumRef.current) return tracker.update("idle");
-
-    const next = normalizedMode === "vowel"
-      ? readAudioVowel(analyser, timeDataRef.current, spectrumRef.current, gateRef.current)
-      : readAudioLevel(analyser, timeDataRef.current, gateRef.current);
-    const mouth = normalizedMode === "vowel"
-      ? next.mouth
-      : volumeMouthFromLevel(next.level, gateRef.current, tracker.shown);
-    setAudioStats({ level: next.level, f1: next.f1 || 0, f2: next.f2 || 0 });
-    return tracker.update(mouth);
-  }, []);
-
-  const readFrame = useCallback(() => {
+  const readFrame = useCallback((timestamp) => {
     if (!activeRef.current) return;
     const video = videoRef.current;
     const landmarker = landmarkerRef.current;
     if (!video || !landmarker || video.readyState < 2) {
-      frameRef.current = requestAnimationFrame(readFrame);
+      frameRef.current = { type: "animation", id: requestAnimationFrame(readFrame) };
       return;
     }
 
-    const result = landmarker.detectForVideo(video, performance.now());
+    const result = landmarker.detectForVideo(video, timestamp || performance.now());
     if (result.faceBlendshapes?.length) {
       const scores = scoreMap(result.faceBlendshapes[0].categories);
-      const mode = normalizeMouthMode(mouthMode);
-      if (mode === "camera") {
-        jawRef.current = smoothValue(jawRef.current, scores.jawOpen || 0, 0.24);
-        readMouth(mode);
-        mouthTrackerRef.current.update(cameraMouthFromJaw(jawRef.current, mouthTrackerRef.current.shown));
-      }
+      jawRef.current = smoothValue(jawRef.current, scores.jawOpen || 0, 0.24);
+      const mouth = mouthTrackerRef.current.update(cameraMouthFromJaw(jawRef.current, mouthTrackerRef.current.shown));
       const rotation = headRotation(result.facialTransformationMatrixes?.[0]);
       const center = faceCenter(result.faceLandmarks?.[0]);
       if (center && !bodyOriginRef.current) bodyOriginRef.current = center;
@@ -133,12 +91,7 @@ export function useAvatarTracking({ enabled, mouthMode = "camera", gate = AUDIO_
       target.hairRoll = (target.bodyRoll + target.headRoll) * V1_AVATAR_MOTION.hair.gravity;
 
       const previous = smoothRef.current;
-      const next = {
-        eyes: ((scores.eyeBlinkLeft || 0) + (scores.eyeBlinkRight || 0)) / 2 > 0.48 ? "closed" : "open",
-        mouth: mode === "camera"
-          ? mouthTrackerRef.current.shown
-          : readMouth(mode),
-      };
+      const next = { eyes: ((scores.eyeBlinkLeft || 0) + (scores.eyeBlinkRight || 0)) / 2 > 0.48 ? "closed" : "open", mouth };
       ["bodyX", "bodyY", "bodyRoll"].forEach((key) => { next[key] = smoothValue(previous[key], target[key], V1_AVATAR_MOTION.body.smoothing); });
       ["headX", "headY", "headRoll"].forEach((key) => { next[key] = smoothValue(previous[key], target[key], V1_AVATAR_MOTION.head.smoothing); });
       ["hairX", "hairY", "hairRoll"].forEach((key) => { next[key] = smoothValue(previous[key], target[key], V1_AVATAR_MOTION.hair.smoothing); });
@@ -146,15 +99,15 @@ export function useAvatarTracking({ enabled, mouthMode = "camera", gate = AUDIO_
       setExpression(next);
       setStatus("tracking");
     } else {
-      if (normalizeMouthMode(mouthMode) !== "camera") {
-        const next = { ...smoothRef.current, mouth: readMouth(mouthMode) };
-        smoothRef.current = next;
-        setExpression(next);
-      }
       setStatus("searching");
     }
-    frameRef.current = requestAnimationFrame(readFrame);
-  }, [mouthMode, readMouth]);
+
+    if (typeof video.requestVideoFrameCallback === "function") {
+      frameRef.current = { type: "video", id: video.requestVideoFrameCallback(readFrame) };
+    } else {
+      frameRef.current = { type: "animation", id: requestAnimationFrame(readFrame) };
+    }
+  }, []);
 
   useEffect(() => {
     if (!enabled) {
@@ -164,13 +117,11 @@ export function useAvatarTracking({ enabled, mouthMode = "camera", gate = AUDIO_
       mouthTrackerRef.current.reset();
       smoothRef.current = V1_EMPTY_EXPRESSION;
       setExpression(V1_EMPTY_EXPRESSION);
-      setAudioStats({ level: 0, f1: 0, f2: 0 });
       setStatus("static");
       return undefined;
     }
 
     let cancelled = false;
-    const normalizedMode = normalizeMouthMode(mouthMode);
     async function start() {
       setStatus("starting");
       bodyOriginRef.current = null;
@@ -180,7 +131,7 @@ export function useAvatarTracking({ enabled, mouthMode = "camera", gate = AUDIO_
         const { FaceLandmarker, FilesetResolver } = await import("@mediapipe/tasks-vision");
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { width: { ideal: 960 }, height: { ideal: 720 }, facingMode: "user" },
-          audio: mouthModeUsesMicrophone(normalizedMode) ? { echoCancellation: true, noiseSuppression: true, autoGainControl: true } : false,
+          audio: false,
         });
         if (cancelled) {
           stream.getTracks().forEach((track) => track.stop());
@@ -203,31 +154,15 @@ export function useAvatarTracking({ enabled, mouthMode = "camera", gate = AUDIO_
           return;
         }
         landmarkerRef.current = landmarker;
-
-        if (mouthModeUsesMicrophone(normalizedMode)) {
-          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-          if (!AudioContextClass) throw new Error("Web Audio is unavailable");
-          const context = new AudioContextClass();
-          audioContextRef.current = context;
-          await context.resume();
-          const source = context.createMediaStreamSource(stream);
-          const analyser = context.createAnalyser();
-          analyser.fftSize = AUDIO_VOWEL_CONFIG.fftSize;
-          analyser.smoothingTimeConstant = AUDIO_VOWEL_CONFIG.smoothingTimeConstant;
-          analyser.minDecibels = AUDIO_VOWEL_CONFIG.minDecibels;
-          analyser.maxDecibels = AUDIO_VOWEL_CONFIG.maxDecibels;
-          source.connect(analyser);
-          audioSourceRef.current = source;
-          analyserRef.current = analyser;
-          timeDataRef.current = new Float32Array(analyser.fftSize);
-          spectrumRef.current = new Float32Array(analyser.frequencyBinCount);
-        }
-
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
         activeRef.current = true;
         setStatus("searching");
-        frameRef.current = requestAnimationFrame(readFrame);
+        if (typeof videoRef.current.requestVideoFrameCallback === "function") {
+          frameRef.current = { type: "video", id: videoRef.current.requestVideoFrameCallback(readFrame) };
+        } else {
+          frameRef.current = { type: "animation", id: requestAnimationFrame(readFrame) };
+        }
       } catch {
         release();
         setStatus("blocked");
@@ -239,7 +174,7 @@ export function useAvatarTracking({ enabled, mouthMode = "camera", gate = AUDIO_
       cancelled = true;
       release();
     };
-  }, [enabled, mouthMode, readFrame, release]);
+  }, [enabled, readFrame, release]);
 
-  return { videoRef, expression, status, audioStats };
+  return { videoRef, expression, status };
 }
