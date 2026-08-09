@@ -1,5 +1,11 @@
 import { useEffect } from "react";
+import Link from "next/link";
 import { PsdTemplateEditor } from "@/components/PsdTemplateEditor";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress";
 import { V1_PSD_EDITOR_LAYER_SPEC } from "@/lib/avatar-v1-psd";
 
 function isAlternate(name) {
@@ -42,59 +48,28 @@ function AvatarV1ObsExport({
   });
 
   return (
-    <div className="avatar-export-dialog-backdrop">
-      <button
-        type="button"
-        className="avatar-export-dialog-dismiss"
-        aria-label="Close Save to OBS"
-        onClick={closeModal}
-      />
-      <form
-        className="avatar-export-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="avatar-export-title"
-        onSubmit={(event) => {
-          event.preventDefault();
-          onConfirm();
-        }}
-      >
-        <header>
-          <span>OBS avatar pack</span>
-          <h2 id="avatar-export-title">{savedPack ? "Avatar saved" : "Save editor layers"}</h2>
-          <p>{savedPack
-            ? `The ${savedPack} pack is ready for the transparent OBS overlay.`
-            : "Choose a pack name. Confirming will replace that pack with the filled editor layers."}</p>
-        </header>
-
-        {!savedPack && (
-          <label>
-            <span>Pack name</span>
-            <input
-              autoFocus
-              value={packName}
-              onChange={(event) => onPackNameChange(event.target.value)}
-              disabled={saving}
-              placeholder="my-avatar"
-              maxLength="48"
-            />
-            <small>public/avatar/{packName || "my-avatar"} · {filledCount}/{totalLayers} layers filled</small>
-          </label>
-        )}
-
-        <div className={`avatar-export-progress ${savedPack ? "is-success" : ""}`}>
-          <i />
-          <span>{progress || "Nothing is saved until you click Confirm save."}</span>
-        </div>
-
-        <footer>
-          <button type="button" className="is-quiet" onClick={closeModal}>{savedPack ? "Close" : "Cancel"}</button>
-          {savedPack
-            ? <a href="/virtual-avatar/v1/live">Open OBS setup ↗</a>
-            : <button type="submit" disabled={saving || !packName || !filledCount}>{saving ? "Saving…" : "Confirm save"}</button>}
-        </footer>
-      </form>
-    </div>
+    <Dialog open onOpenChange={(open) => { if (!open) closeModal(); }}>
+      <DialogContent>
+        <form onSubmit={(event) => { event.preventDefault(); onConfirm(); }}>
+          <DialogHeader>
+            <DialogTitle>{savedPack ? "Avatar saved" : "Save to OBS"}</DialogTitle>
+            <DialogDescription>{savedPack
+              ? `The ${savedPack} pack is ready for the Avatar Live browser source.`
+              : "Save the filled PNG layers as a public pack. It replaces any pack with the same name."}</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            {!savedPack && <div className="grid gap-1.5"><Label htmlFor="avatar-pack-name">Pack name</Label><Input id="avatar-pack-name" autoFocus value={packName} onChange={(event) => onPackNameChange(event.target.value)} disabled={saving} placeholder="my-avatar" maxLength="48" /><p className="text-xs text-muted-foreground">public/avatar/{packName || "my-avatar"} · {filledCount}/{totalLayers} layers filled</p></div>}
+            <Progress value={savedPack ? 100 : saving ? 50 : 0}><ProgressLabel>{progress || "Nothing is saved until you confirm."}</ProgressLabel><ProgressValue /></Progress>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={closeModal}>{savedPack ? "Close" : "Cancel"}</Button>
+            {savedPack
+              ? <Button render={<Link href="/virtual-avatar/v1/live" />}>Open Avatar Live</Button>
+              : <Button type="submit" disabled={saving || !packName || !filledCount}>{saving ? "Saving…" : "Confirm save"}</Button>}
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 

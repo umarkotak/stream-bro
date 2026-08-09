@@ -278,9 +278,9 @@ export function PsdTemplateEditor({
     });
   }
 
-  function changeCanvasSize(event) {
+  function changeCanvasSize(value) {
     setDrawMode(false);
-    const nextSize = Number(event.target.value);
+    const nextSize = Number(value?.target?.value ?? value);
     const ratio = nextSize / canvasSize;
     history.reset(layers.map((layer) => ({
       ...layer,

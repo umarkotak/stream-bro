@@ -1,4 +1,5 @@
 import { V1_EMPTY_EXPRESSION } from "@/lib/avatar-v1-psd";
+import { mouthModeUsesVowels, normalizeMouthMode } from "@/lib/avatar-mouth";
 
 export const OVERLAY_LAYER_FILES = [
   "body-base.png",
@@ -17,10 +18,17 @@ export const OVERLAY_LAYER_FILES = [
   "mouth-state-o.png",
 ];
 
+const GENERIC_MOUTH_FILES = [
+  "mouth-state-idle.png",
+  "mouth-state-small.png",
+  "mouth-state-medium.png",
+  "mouth-state-wide.png",
+];
+
 export const DEFAULT_OVERLAY_CONFIG = Object.freeze({
   pack: "default",
   tracking: true,
-  mouthSource: "video",
+  mouthMode: "camera",
   scale: 100,
   x: 50,
   y: 52,
@@ -43,7 +51,7 @@ export function normalizeOverlayConfig(value = {}) {
   return {
     pack,
     tracking: value.tracking === true || value.tracking === "1",
-    mouthSource: value.mouthSource === "voice" ? "voice" : "video",
+    mouthMode: normalizeMouthMode(value.mouthMode || value.mouthSource),
     scale: clampOverlayNumber(value.scale, 40, 180, DEFAULT_OVERLAY_CONFIG.scale),
     x: clampOverlayNumber(value.x, 0, 100, DEFAULT_OVERLAY_CONFIG.x),
     y: clampOverlayNumber(value.y, 0, 100, DEFAULT_OVERLAY_CONFIG.y),
@@ -54,7 +62,7 @@ export function overlayConfigFromQuery(query = {}) {
   return normalizeOverlayConfig({
     pack: Array.isArray(query.pack) ? query.pack[0] : query.pack,
     tracking: (Array.isArray(query.tracking) ? query.tracking[0] : query.tracking) !== "0",
-    mouthSource: Array.isArray(query.mouth) ? query.mouth[0] : query.mouth,
+    mouthMode: Array.isArray(query.mouth) ? query.mouth[0] : query.mouth,
     scale: Array.isArray(query.scale) ? query.scale[0] : query.scale,
     x: Array.isArray(query.x) ? query.x[0] : query.x,
     y: Array.isArray(query.y) ? query.y[0] : query.y,
@@ -66,7 +74,7 @@ export function buildOverlayPath(config, revision = Date.now()) {
   const params = new URLSearchParams({
     pack: normalized.pack,
     tracking: normalized.tracking ? "1" : "0",
-    mouth: normalized.mouthSource,
+    mouth: normalized.mouthMode,
     scale: String(normalized.scale),
     x: String(normalized.x),
     y: String(normalized.y),
@@ -75,9 +83,14 @@ export function buildOverlayPath(config, revision = Date.now()) {
   return `/virtual-avatar/v1/live/avatar?${params.toString()}`;
 }
 
-export function packSupportsVoice(files = []) {
+export function packSupportsVowels(files = []) {
   return ["mouth-state-a.png", "mouth-state-i.png", "mouth-state-u.png", "mouth-state-e.png", "mouth-state-o.png"]
     .every((file) => files.includes(file));
+}
+
+export function packSupportsMouthMode(files = [], mouthMode) {
+  const supportsGenericMouth = GENERIC_MOUTH_FILES.every((file) => files.includes(file));
+  return supportsGenericMouth && (!mouthModeUsesVowels(mouthMode) || packSupportsVowels(files));
 }
 
 export async function fetchOverlayPacks() {

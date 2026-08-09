@@ -106,6 +106,8 @@ IMAGE AND LAYOUT CONTRACT
 - The head, hair, eye pairs, and mouth shapes must be mutually compatible when centered over the body.
 - Do not show a complete assembled avatar anywhere on the sheet.
 - Each piece must contain only the named content. Do not repeat skin, face, hair, eyes, mouth, clothing, or outlines from another piece.
+- Treat idle, small, medium, and wide as the primary stable mouth-animation sequence: keep their center point, width logic, line weight, lip details, and scale consistent while only the opening amount changes.
+- Treat A, I, U, E, and O as an optional expressive voice set. Keep them compatible with the primary sequence, but never substitute vowel shapes for idle, small, medium, or wide.
 
 EXACT 14-PIECE LAYER CONTRACT, IN READING ORDER
 ${layerContract}

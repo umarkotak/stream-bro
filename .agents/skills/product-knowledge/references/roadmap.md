@@ -19,6 +19,7 @@
 - [x] OBS-ready `/virtual-avatar/v1/live` setup and output routes.
 - [x] Fixed shadcn studio toolbar with breadcrumb navigation and in-stage camera picture-in-picture.
 - [x] Flexible shadcn Avatar Prompt Builder with an explicit 4×4 sheet contract and grid-ordered layer breakdown.
+- [x] Shared stable mouth-animation controller for Studio and OBS, with camera motion, microphone level, and experimental vowel modes.
 
 ## User asset TODO
 

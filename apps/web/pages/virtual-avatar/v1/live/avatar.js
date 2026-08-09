@@ -7,7 +7,7 @@ import {
   fetchOverlayPacks,
   overlayConfigFromQuery,
 } from "@/lib/avatar-overlay";
-import { useOverlayTracking } from "@/lib/use-overlay-tracking";
+import { useAvatarTracking } from "@/lib/avatar-tracking";
 
 export default function AvatarOverlayRenderer() {
   const router = useRouter();
@@ -46,9 +46,9 @@ export default function AvatarOverlayRenderer() {
     return () => { active = false; };
   }, [config.pack, ready]);
 
-  const tracking = useOverlayTracking({
+  const tracking = useAvatarTracking({
     enabled: ready && config.tracking,
-    mouthSource: config.mouthSource,
+    mouthMode: config.mouthMode,
   });
   const revision = Array.isArray(router.query.v) ? router.query.v[0] : router.query.v || "1";
 

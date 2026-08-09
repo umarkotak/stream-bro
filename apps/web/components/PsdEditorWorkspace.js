@@ -1,5 +1,10 @@
 import Link from "next/link";
+import { useRef } from "react";
 import { useRouter } from "next/router";
+import { ArrowLeft, Download, FileUp, Redo2, Save, Undo2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 
 export default function PsdEditorWorkspace({
   backHref = "/",
@@ -26,6 +31,7 @@ export default function PsdEditorWorkspace({
   mode,
 }) {
   const router = useRouter();
+  const importInputRef = useRef(null);
 
   function goBack() {
     if (window.history.length > 1) {
@@ -37,46 +43,25 @@ export default function PsdEditorWorkspace({
 
   return (
     <main className={`psd-editor-shell is-${mode}`}>
-      <header className="psd-editor-topbar">
-        <button type="button" className="psd-editor-back" onClick={goBack} aria-label="Go back">
-          <span aria-hidden="true">←</span>
-          <b>Back</b>
-        </button>
-
-        <label className="psd-editor-file">
-          <span>File</span>
-          <input value={documentName} onChange={onDocumentNameChange} aria-label="PSD file name" />
-        </label>
-
-        <label className="psd-editor-size">
-          <span>Canvas</span>
-          <select value={canvasSize} onChange={onCanvasSizeChange} aria-label="Canvas size">
-            {![512, 1024, 2048].includes(Number(canvasSize)) && <option value={canvasSize}>{canvasSize} × {canvasSize}</option>}
-            <option value="512">512 × 512</option>
-            <option value="1024">1024 × 1024</option>
-            <option value="2048">2048 × 2048</option>
-          </select>
-        </label>
-
-        <label className="psd-editor-import">
-          <span>{importing ? "Reading…" : "Import PSD"}</span>
-          <input type="file" accept=".psd,image/vnd.adobe.photoshop" onChange={onImport} disabled={importing || exporting || savingAvatar} />
-        </label>
-
-        <div className="psd-editor-history" aria-label="History">
-          <button type="button" onClick={onUndo} disabled={!canUndo} aria-label="Undo" title="Undo (Ctrl/Cmd + Z)">↶ <span>Undo</span></button>
-          <button type="button" onClick={onRedo} disabled={!canRedo} aria-label="Redo" title="Redo (Ctrl/Cmd + Shift + Z)">↷ <span>Redo</span></button>
+      <header className="flex h-14 min-w-0 items-center gap-2 border-b border-border bg-card px-3">
+        <Button type="button" variant="ghost" size="sm" onClick={goBack} aria-label="Go back"><ArrowLeft />Back</Button>
+        <Input value={documentName} onChange={onDocumentNameChange} aria-label="PSD file name" className="w-40" />
+        <NativeSelect value={canvasSize} onChange={onCanvasSizeChange} className="w-28" aria-label="Canvas size">
+          {![512, 1024, 2048].includes(Number(canvasSize)) && <NativeSelectOption value={canvasSize}>{canvasSize} × {canvasSize}</NativeSelectOption>}
+          <NativeSelectOption value="512">512 × 512</NativeSelectOption>
+          <NativeSelectOption value="1024">1024 × 1024</NativeSelectOption>
+          <NativeSelectOption value="2048">2048 × 2048</NativeSelectOption>
+        </NativeSelect>
+        <input ref={importInputRef} className="sr-only" type="file" accept=".psd,image/vnd.adobe.photoshop" onChange={onImport} disabled={importing || exporting || savingAvatar} />
+        <Button type="button" variant="outline" size="sm" onClick={() => importInputRef.current?.click()} disabled={importing || exporting || savingAvatar}><FileUp />{importing ? "Reading…" : "Import"}</Button>
+        <div className="flex items-center gap-1 border-l border-border pl-2" aria-label="History">
+          <Button type="button" variant="ghost" size="icon-sm" onClick={onUndo} disabled={!canUndo} aria-label="Undo" title="Undo (Ctrl/Cmd + Z)"><Undo2 /></Button>
+          <Button type="button" variant="ghost" size="icon-sm" onClick={onRedo} disabled={!canRedo} aria-label="Redo" title="Redo (Ctrl/Cmd + Shift + Z)"><Redo2 /></Button>
         </div>
-
-        <div className="psd-editor-top-actions">
-          <Link href={studioHref}>Open studio</Link>
-          {onExportAvatar && (
-            <button type="button" className="is-avatar-export" onClick={onExportAvatar} disabled={exporting || importing || savingAvatar}>
-              {savingAvatar ? "Saving…" : "Save to OBS"}
-            </button>
-          )}
-          <button type="button" onClick={onExport} disabled={exporting || importing || savingAvatar}>{exporting ? "Building…" : "Export PSD"}</button>
-        </div>
+        <span className="min-w-0 flex-1" />
+        <Button variant="outline" size="sm" render={<Link href={studioHref} />}>Open studio</Button>
+        {onExportAvatar && <Button type="button" variant="outline" size="sm" onClick={onExportAvatar} disabled={exporting || importing || savingAvatar}><Save />{savingAvatar ? "Saving…" : "Save to OBS"}</Button>}
+        <Button type="button" size="sm" onClick={onExport} disabled={exporting || importing || savingAvatar}><Download />{exporting ? "Building…" : "Export PSD"}</Button>
       </header>
 
       <div className="psd-editor-workspace">

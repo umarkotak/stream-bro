@@ -29,7 +29,7 @@ Create one copyable URL for an OBS Browser Source. The output page contains only
 - Model selection lists public packs.
 - Tracking can be on or off.
 - Camera mouth tracking is always available.
-- Microphone A/I/U/E/O can be selected only when the model has all five vowel layers.
+- Mouth animation has three shared modes: Camera motion (default), Microphone level (stable speech movement using the four core mouth layers), and Microphone vowels (experimental and available only with all five vowel layers).
 - Scale, horizontal position, and vertical position are encoded in the URL.
 - Setup is saved in local storage.
 - The page provides Copy overlay URL and Open overlay actions.
@@ -51,7 +51,7 @@ Create one copyable URL for an OBS Browser Source. The output page contains only
 
 - `pack`: public avatar pack ID.
 - `tracking`: `1` for automatic local tracking, `0` for idle pose.
-- `mouth`: `video` or `voice`.
+- `mouth`: `camera`, `volume`, or `vowel`. Legacy `video` and `voice` values normalize to `camera` and `volume`.
 - `scale`: 40–180 percent.
 - `x`: horizontal anchor, 0–100 percent.
 - `y`: vertical anchor, 0–100 percent.

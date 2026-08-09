@@ -55,10 +55,7 @@ function nearestVowel(f1, f2) {
 }
 
 export function readAudioVowel(analyser, timeData, spectrum, gate = AUDIO_VOWEL_CONFIG.defaultGate) {
-  analyser.getFloatTimeDomainData(timeData);
-  let energy = 0;
-  for (const sample of timeData) energy += sample * sample;
-  const level = Math.sqrt(energy / timeData.length);
+  const { level } = readAudioLevel(analyser, timeData, gate);
   if (level < gate) return { mouth: "idle", level, f1: 0, f2: 0 };
 
   analyser.getFloatFrequencyData(spectrum);
@@ -66,4 +63,11 @@ export function readAudioVowel(analyser, timeData, spectrum, gate = AUDIO_VOWEL_
   const f1 = strongestPeak(spectrum, binSize, 250, 950);
   const f2 = strongestPeak(spectrum, binSize, Math.max(750, f1 + 250), 2800);
   return { mouth: nearestVowel(f1, f2), level, f1, f2 };
+}
+
+export function readAudioLevel(analyser, timeData) {
+  analyser.getFloatTimeDomainData(timeData);
+  let energy = 0;
+  for (const sample of timeData) energy += sample * sample;
+  return { level: Math.sqrt(energy / timeData.length), f1: 0, f2: 0 };
 }

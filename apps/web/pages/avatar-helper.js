@@ -298,7 +298,7 @@ export default function AvatarHelper() {
           <Card>
             <CardHeader>
               <CardTitle>4×4 sheet contract</CardTitle>
-              <CardDescription>The image has no visible grid lines. Each asset stays inside its named cell; A4 and D4 stay empty.</CardDescription>
+              <CardDescription>The image has no visible grid lines. B3–C2 are the core stable mouth loop; C3–D3 are optional experimental vowels. A4 and D4 stay empty.</CardDescription>
               <CardAction><Badge variant="outline">14 layers</Badge></CardAction>
             </CardHeader>
             <CardContent>

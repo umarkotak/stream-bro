@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AUDIO_VOWEL_CONFIG, readAudioVowel } from "@/lib/audio-vowel";
+import {
+  cameraMouthFromJaw,
+  createMouthStateTracker,
+  mouthModeUsesMicrophone,
+  normalizeMouthMode,
+  volumeMouthFromLevel,
+} from "@/lib/avatar-mouth";
+import { AUDIO_VOWEL_CONFIG, readAudioLevel, readAudioVowel } from "@/lib/audio-vowel";
 import { V1_AVATAR_MOTION, V1_EMPTY_EXPRESSION } from "@/lib/avatar-v1-psd";
 
 function clamp(value, range) {
@@ -29,16 +36,11 @@ function faceCenter(landmarks = []) {
   };
 }
 
-function videoMouth(scores) {
-  const jaw = scores.jawOpen || 0;
-  return jaw > 0.58 ? "wide" : jaw > 0.32 ? "medium" : jaw > 0.12 ? "small" : "idle";
-}
-
 function smoothValue(previous, target, amount) {
   return previous + (target - previous) * amount;
 }
 
-export function useOverlayTracking({ enabled, mouthSource }) {
+export function useAvatarTracking({ enabled, mouthMode = "camera", gate = AUDIO_VOWEL_CONFIG.defaultGate }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const landmarkerRef = useRef(null);
@@ -50,10 +52,15 @@ export function useOverlayTracking({ enabled, mouthSource }) {
   const spectrumRef = useRef(null);
   const bodyOriginRef = useRef(null);
   const smoothRef = useRef(V1_EMPTY_EXPRESSION);
-  const mouthRef = useRef({ shown: "idle", candidate: "idle", frames: 0 });
+  const mouthTrackerRef = useRef(createMouthStateTracker({ stableFrames: 3, idleFrames: 2 }));
+  const jawRef = useRef(0);
+  const gateRef = useRef(gate);
   const activeRef = useRef(false);
   const [expression, setExpression] = useState(V1_EMPTY_EXPRESSION);
   const [status, setStatus] = useState(enabled ? "starting" : "static");
+  const [audioStats, setAudioStats] = useState({ level: 0, f1: 0, f2: 0 });
+
+  useEffect(() => { gateRef.current = gate; }, [gate]);
 
   const release = useCallback(() => {
     activeRef.current = false;
@@ -73,25 +80,21 @@ export function useOverlayTracking({ enabled, mouthSource }) {
     spectrumRef.current = null;
   }, []);
 
-  const readVoiceMouth = useCallback(() => {
+  const readMouth = useCallback((mode) => {
+    const normalizedMode = normalizeMouthMode(mode);
+    const tracker = mouthTrackerRef.current;
+    if (normalizedMode === "camera") return tracker.shown;
     const analyser = analyserRef.current;
-    if (!analyser || !timeDataRef.current || !spectrumRef.current) return "idle";
-    const next = readAudioVowel(analyser, timeDataRef.current, spectrumRef.current, AUDIO_VOWEL_CONFIG.defaultGate);
-    const tracker = mouthRef.current;
-    if (next.mouth === tracker.shown) {
-      tracker.candidate = next.mouth;
-      tracker.frames = 0;
-    } else if (next.mouth === tracker.candidate) {
-      tracker.frames += 1;
-      if (tracker.frames >= AUDIO_VOWEL_CONFIG.stableFrames) {
-        tracker.shown = next.mouth;
-        tracker.frames = 0;
-      }
-    } else {
-      tracker.candidate = next.mouth;
-      tracker.frames = 1;
-    }
-    return tracker.shown;
+    if (!analyser || !timeDataRef.current || !spectrumRef.current) return tracker.update("idle");
+
+    const next = normalizedMode === "vowel"
+      ? readAudioVowel(analyser, timeDataRef.current, spectrumRef.current, gateRef.current)
+      : readAudioLevel(analyser, timeDataRef.current, gateRef.current);
+    const mouth = normalizedMode === "vowel"
+      ? next.mouth
+      : volumeMouthFromLevel(next.level, gateRef.current, tracker.shown);
+    setAudioStats({ level: next.level, f1: next.f1 || 0, f2: next.f2 || 0 });
+    return tracker.update(mouth);
   }, []);
 
   const readFrame = useCallback(() => {
@@ -103,10 +106,15 @@ export function useOverlayTracking({ enabled, mouthSource }) {
       return;
     }
 
-    const audioMouth = mouthSource === "voice" ? readVoiceMouth() : "idle";
     const result = landmarker.detectForVideo(video, performance.now());
     if (result.faceBlendshapes?.length) {
       const scores = scoreMap(result.faceBlendshapes[0].categories);
+      const mode = normalizeMouthMode(mouthMode);
+      if (mode === "camera") {
+        jawRef.current = smoothValue(jawRef.current, scores.jawOpen || 0, 0.24);
+        readMouth(mode);
+        mouthTrackerRef.current.update(cameraMouthFromJaw(jawRef.current, mouthTrackerRef.current.shown));
+      }
       const rotation = headRotation(result.facialTransformationMatrixes?.[0]);
       const center = faceCenter(result.faceLandmarks?.[0]);
       if (center && !bodyOriginRef.current) bodyOriginRef.current = center;
@@ -127,52 +135,52 @@ export function useOverlayTracking({ enabled, mouthSource }) {
       const previous = smoothRef.current;
       const next = {
         eyes: ((scores.eyeBlinkLeft || 0) + (scores.eyeBlinkRight || 0)) / 2 > 0.48 ? "closed" : "open",
-        mouth: mouthSource === "voice" ? audioMouth : videoMouth(scores),
+        mouth: mode === "camera"
+          ? mouthTrackerRef.current.shown
+          : readMouth(mode),
       };
-      ["bodyX", "bodyY", "bodyRoll"].forEach((key) => {
-        next[key] = smoothValue(previous[key], target[key], V1_AVATAR_MOTION.body.smoothing);
-      });
-      ["headX", "headY", "headRoll"].forEach((key) => {
-        next[key] = smoothValue(previous[key], target[key], V1_AVATAR_MOTION.head.smoothing);
-      });
-      ["hairX", "hairY", "hairRoll"].forEach((key) => {
-        next[key] = smoothValue(previous[key], target[key], V1_AVATAR_MOTION.hair.smoothing);
-      });
+      ["bodyX", "bodyY", "bodyRoll"].forEach((key) => { next[key] = smoothValue(previous[key], target[key], V1_AVATAR_MOTION.body.smoothing); });
+      ["headX", "headY", "headRoll"].forEach((key) => { next[key] = smoothValue(previous[key], target[key], V1_AVATAR_MOTION.head.smoothing); });
+      ["hairX", "hairY", "hairRoll"].forEach((key) => { next[key] = smoothValue(previous[key], target[key], V1_AVATAR_MOTION.hair.smoothing); });
       smoothRef.current = next;
       setExpression(next);
       setStatus("tracking");
     } else {
-      if (mouthSource === "voice") {
-        const next = { ...smoothRef.current, mouth: audioMouth };
+      if (normalizeMouthMode(mouthMode) !== "camera") {
+        const next = { ...smoothRef.current, mouth: readMouth(mouthMode) };
         smoothRef.current = next;
         setExpression(next);
       }
       setStatus("searching");
     }
     frameRef.current = requestAnimationFrame(readFrame);
-  }, [mouthSource, readVoiceMouth]);
+  }, [mouthMode, readMouth]);
 
   useEffect(() => {
     if (!enabled) {
       release();
       bodyOriginRef.current = null;
-      mouthRef.current = { shown: "idle", candidate: "idle", frames: 0 };
+      jawRef.current = 0;
+      mouthTrackerRef.current.reset();
       smoothRef.current = V1_EMPTY_EXPRESSION;
       setExpression(V1_EMPTY_EXPRESSION);
+      setAudioStats({ level: 0, f1: 0, f2: 0 });
       setStatus("static");
       return undefined;
     }
 
     let cancelled = false;
+    const normalizedMode = normalizeMouthMode(mouthMode);
     async function start() {
       setStatus("starting");
       bodyOriginRef.current = null;
-      mouthRef.current = { shown: "idle", candidate: "idle", frames: 0 };
+      jawRef.current = 0;
+      mouthTrackerRef.current.reset();
       try {
         const { FaceLandmarker, FilesetResolver } = await import("@mediapipe/tasks-vision");
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { width: { ideal: 960 }, height: { ideal: 720 }, facingMode: "user" },
-          audio: mouthSource === "voice" ? { echoCancellation: true, noiseSuppression: true, autoGainControl: true } : false,
+          audio: mouthModeUsesMicrophone(normalizedMode) ? { echoCancellation: true, noiseSuppression: true, autoGainControl: true } : false,
         });
         if (cancelled) {
           stream.getTracks().forEach((track) => track.stop());
@@ -196,7 +204,7 @@ export function useOverlayTracking({ enabled, mouthSource }) {
         }
         landmarkerRef.current = landmarker;
 
-        if (mouthSource === "voice") {
+        if (mouthModeUsesMicrophone(normalizedMode)) {
           const AudioContextClass = window.AudioContext || window.webkitAudioContext;
           if (!AudioContextClass) throw new Error("Web Audio is unavailable");
           const context = new AudioContextClass();
@@ -231,7 +239,7 @@ export function useOverlayTracking({ enabled, mouthSource }) {
       cancelled = true;
       release();
     };
-  }, [enabled, mouthSource, readFrame, release]);
+  }, [enabled, mouthMode, readFrame, release]);
 
-  return { videoRef, expression, status };
+  return { videoRef, expression, status, audioStats };
 }
